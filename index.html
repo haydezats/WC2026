@@ -576,6 +576,180 @@ function Penalty(){
   );
 }
 
+/* ---------- Divers: Neill v Grosso (skill endless-runner tab) ---------- */
+function Divers(){
+  const W=320, H=150, GROUND=124, PX=40, PW=14, PH=22;
+  const GRAV=1100, JUMP=-360, SPD0=150, ACCEL=7, SPDMAX=330;
+  const DV = { gold:"#E8B23A", goldDk:"#b97f12", blue:"#2f6fe0", blueDk:"#1f4fa8",
+    skin:"#f1c27d", navy:"#16223c", white:"#f4f7ff", sky:"#1b2740", sky2:"#101a30",
+    stand:"#26344f", crowd:"#3a4a6a", grass:"#2f9e44", grass2:"#268a3a", ink:"#0b0f17",
+    band:"#F0697D", good:"#3FD08B", bad:"#F0697D" };
+  const cvs=React.useRef(null), raf=React.useRef(0);
+  const m=React.useRef(null);
+  const overTxt=React.useRef("PENALTY GIVEN!");
+  const [phase,setPhase]=React.useState("ready");
+  const [score,setScore]=React.useState(0);
+  const [best,setBest]=React.useState(Number(localStorage.getItem("wc26_divers_best")||0));
+
+  const px=(ctx,x,y,w,h,c)=>{ ctx.fillStyle=c; ctx.fillRect(x|0,y|0,Math.ceil(w),Math.ceil(h)); };
+
+  function fresh(){
+    return { phase:"run", last:0, speed:SPD0, dist:0, scoreInt:0,
+      scroll:0, bgScroll:0,
+      p:{ feet:GROUND, vy:0, onGround:true, legT:0, legFrame:0 },
+      obs:[], spawnDist:300 };
+  }
+
+  function makeObstacle(speed){
+    const tall = Math.random()<0.28;
+    const h = tall ? 24+Math.random()*7 : 14+Math.random()*7;
+    const w = 18+Math.random()*15;
+    return { x:W+8, w:w, h:h, t:Math.random()*6 };
+  }
+  function nextGap(speed){ return 150 + Math.random()*135 + speed*0.28; }
+
+  function drawPlayer(ctx, feet, onGround, frame){
+    const x=PX, top=feet-PH;
+    px(ctx, x-2, GROUND-1, PW+4, 2, "rgba(0,0,0,.28)"); // shadow
+    px(ctx, x+3, top-7, 7,7, DV.skin);                  // head
+    px(ctx, x+3, top-7, 7,2, DV.ink);                   // hair
+    px(ctx, x+1, top, 11,12, DV.gold);                  // jersey
+    px(ctx, x+1, top, 11,3, DV.goldDk);
+    px(ctx, x+1, top+3, 3,2, DV.band);                  // captain's armband
+    px(ctx, x+2, top+12, 9,4, DV.navy);                 // shorts
+    px(ctx, x+11, top+2, 3,6, DV.skin);                 // pumping arm
+    if(onGround){
+      if(frame===0){ px(ctx, x+2, top+16, 3,6, DV.skin); px(ctx, x+8, top+16, 3,4, DV.skin); }
+      else { px(ctx, x+2, top+16, 3,4, DV.skin); px(ctx, x+8, top+16, 3,6, DV.skin); }
+    } else { px(ctx, x+2, top+16, 3,5, DV.skin); px(ctx, x+8, top+15, 4,4, DV.skin); }
+  }
+
+  function drawDiver(ctx, ob){
+    const x=Math.round(ob.x), bottom=GROUND, top=bottom-ob.h, w=ob.w;
+    const wob = Math.sin(ob.t*8)*1;
+    for(let i=1;i<=3;i++) px(ctx, x+w+i*3, top+ob.h-5, 2,2, "rgba(255,255,255,.25)"); // motion lines
+    px(ctx, x+w-7, top+ob.h*0.45, 7,4, DV.navy);        // trailing legs
+    px(ctx, x+2, top+2+wob, w-6, ob.h-5, DV.blue);      // body
+    px(ctx, x+2, top+2+wob, w-6, 2, DV.blueDk);
+    px(ctx, x-1, top-1+wob, 7,7, DV.skin);              // head (leading)
+    px(ctx, x-1, top-1+wob, 7,2, DV.ink);
+    px(ctx, x+1, top-4+wob, 3,5, DV.skin);              // arm flailing up
+    px(ctx, x-4, top+2+wob, 4,3, DV.skin);              // arm reaching forward
+  }
+
+  function render(){
+    const ctx = cvs.current && cvs.current.getContext("2d"); if(!ctx) return;
+    const g=m.current;
+    const bg = g?g.bgScroll:0, sc = g?g.scroll:0;
+    px(ctx,0,0,W,H,DV.sky); px(ctx,0,0,W,40,DV.sky2);
+    px(ctx,0,40,W,18,DV.stand);                          // stands
+    for(let i=0;i<W+10;i+=6){ const o=(i-(bg%6)); px(ctx,o,44,3,3,"#46577a"); px(ctx,o+2,50,2,2,"#37466a"); }
+    px(ctx,0,58,W,3,DV.blueDk);                          // advert hoarding
+    px(ctx,0,GROUND,W,H-GROUND,DV.grass);                // pitch
+    for(let i=-1;i<W/18+1;i++){ const o=i*18-(sc%18); px(ctx,o,GROUND,9,H-GROUND,DV.grass2); }
+    px(ctx,0,GROUND-1,W,2,DV.white);                     // touchline
+    for(let i=-1;i<W/40+1;i++){ const o=i*40-(sc%40); px(ctx,o,GROUND-1,2,5,DV.white); } // hash marks
+    if(g){ g.obs.forEach(o=>drawDiver(ctx,o)); drawPlayer(ctx, g.p.feet, g.p.onGround, g.p.legFrame); }
+    else { drawPlayer(ctx, GROUND, true, 0); }
+  }
+
+  function update(dt){
+    const g=m.current;
+    g.speed = Math.min(SPDMAX, g.speed + ACCEL*dt);
+    g.dist += g.speed*dt;
+    g.scroll += g.speed*dt; g.bgScroll += g.speed*0.25*dt;
+    const p=g.p;
+    p.vy += GRAV*dt; p.feet += p.vy*dt;
+    if(p.feet>=GROUND){ p.feet=GROUND; p.vy=0; p.onGround=true; } else p.onGround=false;
+    if(p.onGround){ p.legT+=dt; if(p.legT>0.1){ p.legT=0; p.legFrame^=1; } }
+    g.spawnDist -= g.speed*dt;
+    if(g.spawnDist<=0){ g.obs.push(makeObstacle(g.speed)); g.spawnDist = nextGap(g.speed); }
+    g.obs.forEach(o=>{ o.x -= g.speed*dt; o.t += dt; });
+    g.obs = g.obs.filter(o=>o.x + o.w > -12);
+    // collision (forgiving insets)
+    const pl=PX+3, pr=PX+PW-3, pt=p.feet-PH+2, pb=p.feet-1;
+    for(const o of g.obs){
+      const ol=o.x+2, or=o.x+o.w-2, ot=GROUND-o.h+2, ob=GROUND-1;
+      if(pr>ol && pl<or && pb>ot && pt<ob){ gameOver(); return; }
+    }
+    const si=Math.floor(g.dist/12);
+    if(si!==g.scoreInt){ g.scoreInt=si; setScore(si); }
+  }
+
+  function frame(ts){
+    const g=m.current; if(!g || g.phase!=="run") return;
+    if(!g.last) g.last=ts;
+    let dt=(ts-g.last)/1000; g.last=ts; if(dt>0.05) dt=0.05;
+    update(dt);
+    if(m.current && m.current.phase!=="run") return; // gameOver may have fired
+    render();
+    raf.current=requestAnimationFrame(frame);
+  }
+
+  function start(){
+    m.current=fresh(); setScore(0); setPhase("run");
+    cancelAnimationFrame(raf.current); raf.current=requestAnimationFrame(frame);
+  }
+  function gameOver(){
+    const g=m.current; g.phase="over";
+    overTxt.current=["PENALTY GIVEN!","HE WENT DOWN!","GROSSO WINS IT!","REF POINTS TO THE SPOT!"][Math.floor(Math.random()*4)];
+    if(g.scoreInt>best){ setBest(g.scoreInt); try{localStorage.setItem("wc26_divers_best",String(g.scoreInt));}catch(e){} }
+    setPhase("over"); render();
+  }
+  function input(){
+    const g=m.current;
+    if(!g || g.phase==="ready"){ start(); return; }
+    if(g.phase==="over"){ start(); return; }
+    if(g.phase==="run" && g.p.onGround){ g.p.vy=JUMP; g.p.onGround=false; }
+  }
+
+  React.useEffect(()=>{
+    render();
+    const onKey=(e)=>{
+      if(e.key===" "||e.key==="ArrowUp"||e.key==="Enter"){ e.preventDefault(); input(); }
+    };
+    window.addEventListener("keydown",onKey);
+    return ()=>{ window.removeEventListener("keydown",onKey); cancelAnimationFrame(raf.current); };
+  },[]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-xl p-3 flex items-center justify-between" style={{background:C.card,border:"1px solid "+C.lineSoft}}>
+        <span style={{fontFamily:"'Press Start 2P',monospace",fontSize:10,color:DV.gold}}>SCORE <b style={{color:C.text}}>{score}</b></span>
+        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:1,color:C.text,textAlign:"center",lineHeight:1}}>DIVERS<br/><span style={{fontSize:11,color:C.sub,letterSpacing:.5}}>NEILL v GROSSO</span></span>
+        <span style={{fontFamily:"'Press Start 2P',monospace",fontSize:10,color:C.sub}}>BEST <b style={{color:DV.good}}>{best}</b></span>
+      </div>
+
+      <div className="relative mx-auto" style={{width:"100%",maxWidth:480,touchAction:"manipulation"}}
+        onPointerDown={(e)=>{ e.preventDefault(); input(); }}>
+        <canvas ref={cvs} width={W} height={H}
+          style={{width:"100%",height:"auto",imageRendering:"pixelated",borderRadius:8,
+            border:"2px solid "+C.line, background:DV.sky, display:"block", cursor:"pointer"}}/>
+        {phase==="ready" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2" style={{background:"rgba(8,12,22,.62)",borderRadius:8}}>
+            <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:13,color:DV.gold,textShadow:"2px 2px 0 "+DV.ink}}>DIVERS</div>
+            <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:8,color:C.sub}}>TAP / SPACE TO HOP THE DIVE</div>
+          </div>
+        )}
+        {phase==="over" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3" style={{background:"rgba(8,12,22,.82)",borderRadius:8}}>
+            <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:12,color:DV.bad,textShadow:"2px 2px 0 "+DV.ink}}>{overTxt.current}</div>
+            <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:9,color:C.sub}}>SCORE {score} · BEST {best}</div>
+            <button onClick={(e)=>{ e.stopPropagation(); start(); }}
+              style={{fontFamily:"'Press Start 2P',monospace",fontSize:10,color:DV.ink,background:DV.gold,
+                border:"0",borderRadius:6,padding:"12px 18px",cursor:"pointer",boxShadow:"0 3px 0 "+DV.goldDk}}>PLAY ON ▶</button>
+          </div>
+        )}
+      </div>
+
+      <div style={{fontSize:12,color:C.dim,lineHeight:1.5,textAlign:"center"}}>
+        You're in gold (Neill). Blue divers (Grosso) fling themselves across the box — <b style={{color:C.sub}}>tap / Space</b> to hop over them.
+        One touch and the ref points to the spot. It only gets faster.
+      </div>
+    </div>
+  );
+}
+
 function App(){
   const [tab,setTab]=useState("schedule");
   return (
@@ -605,7 +779,7 @@ function App(){
 
         {/* main tabs */}
         <div className="flex gap-2 mt-5 mb-6">
-          {[["schedule","Schedule"],["leaderboard","Leaderboard"],["penalty","Penalties"]].map(([id,lbl])=>(
+          {[["schedule","Schedule"],["leaderboard","Leaderboard"],["penalty","Penalties"],["divers","Divers"]].map(([id,lbl])=>(
             <button key={id} onClick={()=>setTab(id)} className="rounded-xl font-bold transition flex-1 sm:flex-none"
               style={{padding:"10px 22px",fontSize:14,letterSpacing:.4,
                 background:tab===id?C.gold:C.card, color:tab===id?C.ink:C.text,
@@ -616,6 +790,7 @@ function App(){
         {tab==="schedule"&&<Schedule/>}
         {tab==="leaderboard"&&<Leaderboard/>}
         {tab==="penalty"&&<Penalty/>}
+        {tab==="divers"&&<Divers/>}
 
         <div style={{marginTop:40,paddingTop:16,borderTop:"1px solid "+C.lineSoft,fontSize:11,color:C.dim}}>
           Kick-offs converted to AEST (no daylight saving Jun/Jul) and subject to FIFA confirmation ·
