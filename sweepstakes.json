@@ -1674,32 +1674,46 @@
   },
   "members": [
     {
-      "name": "Stable 1",
-      "teams": []
+      "id": "kidd",
+      "name": "Adam Kidd",
+      "shortName": "Kidd",
+      "teams": ["Portugal", "Netherlands", "Senegal", "Türkiye", "Iran", "Uzbekistan"]
     },
     {
-      "name": "Stable 2",
-      "teams": []
+      "id": "ash",
+      "name": "Ashley Mullahey",
+      "shortName": "Ash",
+      "teams": ["England", "Mexico", "Canada", "Republic of Ireland", "DR Congo", "Curaçao"]
     },
     {
-      "name": "Stable 3",
-      "teams": []
+      "id": "lapa",
+      "name": "Chris Lapa",
+      "shortName": "Lapa",
+      "teams": ["Argentina", "Japan", "Switzerland", "Australia", "Qatar", "New Zealand"]
     },
     {
-      "name": "Stable 4",
-      "teams": []
+      "id": "damo",
+      "name": "Damien Way",
+      "shortName": "Damo",
+      "teams": ["Spain", "Colombia", "USA", "Egypt", "Panama", "South Africa"]
     },
     {
-      "name": "Stable 5",
-      "teams": []
+      "id": "donda",
+      "name": "Hayden Radic",
+      "shortName": "Donda",
+      "teams": ["Germany", "Croatia", "South Korea", "Austria", "Scotland", "Tunisia"]
     },
     {
-      "name": "Stable 6",
-      "teams": []
+      "id": "chick",
+      "name": "Josh Clarke",
+      "shortName": "Chick",
+      "teams": ["France", "Norway", "Morocco", "Sweden", "Paraguay", "Jordan"]
     },
     {
-      "name": "Stable 7",
-      "teams": []
+      "id": "mash",
+      "name": "Mash Raider",
+      "shortName": "Mash",
+      "teams": ["Brazil", "Belgium", "Uruguay", "Ecuador", "Algeria", "Saudi Arabia"]
     }
   ]
 }
