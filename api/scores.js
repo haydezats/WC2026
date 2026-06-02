@@ -41,6 +41,12 @@ async function topFive() {
 }
 
 module.exports = async (req, res) => {
+  // Safe diagnostic: lists storage-related env var NAMES only (never values).
+  if (req.method === "GET" && req.query && req.query.debug === "1") {
+    const envKeys = Object.keys(process.env).filter((k) => /REDIS|KV_|UPSTASH/i.test(k)).sort();
+    res.status(200).json({ envKeys: envKeys, hasUrl: !!REST_URL, hasToken: !!REST_TOKEN });
+    return;
+  }
   if (!REST_URL || !REST_TOKEN) {
     res.status(503).json({ error: "leaderboard store not configured" });
     return;
