@@ -583,7 +583,7 @@ function Penalty(){
 /* ---------- Divers: Neill v Grosso (skill endless-runner tab) ---------- */
 function Divers(){
   const W=320, H=150, GROUND=124, PX=40, PW=14, PH=22;
-  const GRAV=1100, JUMP=-360, SPD0=150, ACCEL=7, SPDMAX=330;
+  const GRAV=1300, JUMP=-370, SPD0=170, ACCEL=10, SPDMAX=420;
   const DV = { gold:"#E8B23A", goldDk:"#b97f12", blue:"#2f6fe0", blueDk:"#1f4fa8",
     skin:"#f1c27d", navy:"#16223c", white:"#f4f7ff", sky:"#1b2740", sky2:"#101a30",
     stand:"#26344f", crowd:"#3a4a6a", grass:"#2f9e44", grass2:"#268a3a", ink:"#0b0f17",
@@ -614,19 +614,19 @@ function Divers(){
   }
 
   function makeObstacle(speed){
-    const tall = Math.random()<0.32;
-    const h = tall ? 26+Math.random()*8 : 14+Math.random()*8;   // swan dive vs low slide
-    const w = tall ? 16+Math.random()*8 : 22+Math.random()*16;  // dives narrower, slides longer
+    const tall = Math.random()<0.40;
+    const h = tall ? 26+Math.random()*9 : 14+Math.random()*9;   // swan dive vs low slide
+    const w = tall ? 16+Math.random()*8 : 22+Math.random()*18;  // dives narrower, slides longer
     return { x:W+8, w:w, h:h, t:Math.random()*6, tall:tall };
   }
-  // Heavily varied spacing: occasional tight back-to-backs, normal spread, and long breathers.
+  // Heavily varied spacing: tighter and more frequent back-to-backs, with the odd breather.
   function nextGap(speed){
-    const base = 120 + speed*0.32;            // minimum clearance, scales with pace (stays fair)
+    const base = 96 + speed*0.30;             // minimum clearance, scales with pace (stays fair)
     const r = Math.random();
     let extra;
-    if(r<0.18)      extra = 10 + Math.random()*45;    // tight
-    else if(r<0.80) extra = 70 + Math.random()*185;   // normal
-    else            extra = 235 + Math.random()*265;  // long breather
+    if(r<0.26)      extra = 0   + Math.random()*45;   // tight (more frequent)
+    else if(r<0.82) extra = 55  + Math.random()*160;  // normal
+    else            extra = 220 + Math.random()*230;  // long breather
     return base + extra;
   }
 

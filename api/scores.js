@@ -55,7 +55,7 @@ module.exports = async (req, res) => {
         res.status(400).json({ error: "invalid score" });
         return;
       }
-      score = Math.min(score, 999);
+      score = Math.min(score, 9999999); // generous cap; allows full multi-digit scores
 
       const member = name + SEP + Date.now() + SEP + Math.random().toString(36).slice(2, 7);
       await c.zAdd(key, { score: score, value: member });
