@@ -266,16 +266,6 @@ function Leaderboard(){
         </div>
       </div>
 
-      {!live && (
-        <div className="rounded-xl p-4 flex items-start gap-3" style={{background:C.gold+"14",border:"1px solid "+C.gold+"44"}}>
-          <span style={{fontSize:20}}>📋</span>
-          <div style={{fontSize:13,color:C.text,lineHeight:1.5}}>
-            <b>Draft pending.</b> 7 stables × 6 teams (42 of 48). Send the selections and the leaderboard goes live —
-            points compute automatically from match results once the tournament kicks off.
-          </div>
-        </div>
-      )}
-
       {/* members */}
       <div className="rounded-xl overflow-hidden" style={{border:"1px solid "+C.lineSoft}}>
         <div className="grid items-center px-4 py-2" style={{gridTemplateColumns:"28px 1fr 46px 46px 46px 46px 54px",
