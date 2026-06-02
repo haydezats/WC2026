@@ -37,6 +37,20 @@ module.exports = async (req, res) => {
     res.status(503).json({ error: "leaderboard store not configured" });
     return;
   }
+  // Temporary write self-test: writes a sentinel, reads, then deletes it. No lasting change.
+  if (req.method === "GET" && req.query && req.query.selftest === "1") {
+    try {
+      const c = await getClient();
+      const m = "ZZSELFTEST" + SEP + Date.now();
+      const added = await c.zAdd(KEY, { score: 1, value: m });
+      const board = await topFive(c);
+      const removed = await c.zRem(KEY, m);
+      res.status(200).json({ added: added, removed: removed, board: board });
+    } catch (e) {
+      res.status(500).json({ error: "selftest failed", detail: String(e && e.message || e) });
+    }
+    return;
+  }
   try {
     const c = await getClient();
 
