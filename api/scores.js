@@ -6,7 +6,8 @@
 
 const { createClient } = require("redis");
 
-const KEY = "pen:scores";
+const KEYS = { penalty: "pen:scores", divers: "divers:scores" };
+const keyFor = (g) => KEYS[g] || KEYS.penalty; // default keeps the original penalty board
 const SEP = ""; // delimiter between display name and uniqueness suffix in a member
 
 let client; // reused across warm invocations
@@ -18,8 +19,8 @@ async function getClient() {
   return client;
 }
 
-async function topFive(c) {
-  const rows = await c.zRangeWithScores(KEY, 0, 4, { REV: true }); // highest first: [{value, score}]
+async function topFive(c, key) {
+  const rows = await c.zRangeWithScores(key, 0, 4, { REV: true }); // highest first: [{value, score}]
   return rows.map((r) => ({
     name: String(r.value).split(SEP)[0] || "YOU",
     score: Number(r.score) || 0,
@@ -35,8 +36,9 @@ module.exports = async (req, res) => {
     const c = await getClient();
 
     if (req.method === "GET") {
+      const key = keyFor(req.query && req.query.game);
       res.setHeader("Cache-Control", "no-store");
-      res.status(200).json({ scores: await topFive(c) });
+      res.status(200).json({ scores: await topFive(c, key) });
       return;
     }
 
@@ -45,6 +47,7 @@ module.exports = async (req, res) => {
       if (typeof body === "string") { try { body = JSON.parse(body || "{}"); } catch (e) { body = {}; } }
       if (!body || typeof body !== "object") body = {};
 
+      const key = keyFor(body.game);
       const name = String(body.name == null ? "" : body.name)
         .replace(/[^\x20-\x7E]/g, "").trim().slice(0, 10).toUpperCase() || "YOU";
       let score = Math.floor(Number(body.score));
@@ -55,10 +58,10 @@ module.exports = async (req, res) => {
       score = Math.min(score, 999);
 
       const member = name + SEP + Date.now() + SEP + Math.random().toString(36).slice(2, 7);
-      await c.zAdd(KEY, { score: score, value: member });
-      await c.zRemRangeByRank(KEY, 0, -51); // keep only the highest 50 entries
+      await c.zAdd(key, { score: score, value: member });
+      await c.zRemRangeByRank(key, 0, -51); // keep only the highest 50 entries
 
-      res.status(200).json({ scores: await topFive(c) });
+      res.status(200).json({ scores: await topFive(c, key) });
       return;
     }
 
