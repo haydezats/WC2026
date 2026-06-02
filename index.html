@@ -335,6 +335,7 @@ function Penalty(){
   const [scores,setScores] = React.useState(()=>{ try{ return JSON.parse(localStorage.getItem("wc26_pen_scores")||"[]"); }catch(e){ return []; } });
   const [nameInput,setNameInput] = React.useState("");
   const [saved,setSaved] = React.useState(false);
+  const [online,setOnline] = React.useState(false);
 
   const lerp=(a,b,t)=>a+(b-a)*t;
   const easeOut=t=>1-Math.pow(1-t,2);
@@ -442,6 +443,10 @@ function Penalty(){
 
   React.useEffect(()=>{
     draw(); sync();
+    fetch("/api/scores").then(r=>r.ok?r.json():Promise.reject(r.status))
+      .then(d=>{ if(d&&Array.isArray(d.scores)){ setOnline(true); setScores(d.scores);
+        try{ localStorage.setItem("wc26_pen_scores",JSON.stringify(d.scores)); }catch(e){} } })
+      .catch(()=>setOnline(false));
     const onKey=(e)=>{
       if(e.target && (e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")) return;
       if(g.current.phase==="over" && (e.key==="Enter"||e.key===" ")){ e.preventDefault(); retry(); return; }
@@ -463,12 +468,23 @@ function Penalty(){
   );
 
   const qualifies = ui.streak>0 && (scores.length<5 || ui.streak>scores[scores.length-1].score);
-  function saveScore(){
+  async function saveScore(){
     const nm=(nameInput.trim()||"YOU").toUpperCase().slice(0,10);
-    const next=[...scores,{name:nm,score:g.current.streak}].sort((a,b)=>b.score-a.score).slice(0,5);
+    const sc=g.current.streak;
+    setSaved(true); setNameInput("");
+    if(online){
+      try{
+        const r=await fetch("/api/scores",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({name:nm,score:sc})});
+        if(r.ok){ const d=await r.json();
+          if(d&&Array.isArray(d.scores)){ setScores(d.scores);
+            try{ localStorage.setItem("wc26_pen_scores",JSON.stringify(d.scores)); }catch(e){}
+            return; } }
+      }catch(e){}
+    }
+    const next=[...scores,{name:nm,score:sc}].sort((a,b)=>b.score-a.score).slice(0,5);
     setScores(next);
     try{ localStorage.setItem("wc26_pen_scores",JSON.stringify(next)); }catch(e){}
-    setSaved(true); setNameInput("");
   }
 
   return (
@@ -537,7 +553,10 @@ function Penalty(){
       </div>
 
       <div className="rounded-xl overflow-hidden mx-auto" style={{width:"100%",maxWidth:360,border:"1px solid "+C.lineSoft}}>
-        <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:9,color:PEN.goldT,background:C.panel,padding:"11px 12px",letterSpacing:.5,textAlign:"center"}}>★ TOP 5 · PENALTY KINGS ★</div>
+        <div style={{background:C.panel,padding:"10px 12px",textAlign:"center"}}>
+          <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:9,color:PEN.goldT,letterSpacing:.5}}>★ TOP 5 · PENALTY KINGS ★</div>
+          <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:7,color:online?PEN.good:C.dim,marginTop:6,letterSpacing:.5}}>{online?"GLOBAL · LIVE":"THIS DEVICE"}</div>
+        </div>
         {scores.length===0 ? (
           <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 12px",background:C.card}}>No scores yet — set a streak and put your name up.</div>
         ) : scores.map((s,i)=>(
