@@ -1,0 +1,9 @@
+{
+  "name": "wc2026-sweepstakes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "World Cup 2026 sweepstakes board + penalty arcade with a global leaderboard.",
+  "dependencies": {
+    "redis": "^4.7.0"
+  }
+}
