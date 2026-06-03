@@ -309,57 +309,88 @@ function Leaderboard(){
   );
 }
 
-/* ---------- 8-bit Penalty Shootout (arcade tab) ---------- */
+/* ---------- 8-bit Penalty Shootout (skill build) ---------- */
 const PEN = {
   sky:"#241734", stand:"#3a2a55", stand2:"#2c1f44", grass:"#2f9e44", grass2:"#268a3a",
   post:"#f4f7ff", net:"#9aa6c4", ball:"#ffffff", ink:"#0b0f17",
-  kit:"#E8B23A", kit2:"#b97f12", skin:"#f1c27d", glove:"#F0697D",
-  goldT:"#E8B23A", good:"#3FD08B", bad:"#F0697D"
+  kit:"#E8B23A", kit2:"#b97f12", skin:"#f1c27d", glove:"#F0697D", cap:"#23262e",
+  goldT:"#E8B23A", good:"#3FD08B", bad:"#F0697D",
+  sgreen:"#2fae57", samber:"#caa23a", sred:"#7a2230"
 };
 function Penalty(){
   const W=240, H=180;
+  // 3x3 grid of shooting spots
   const ZONES = [
-    {id:0, label:"↖", tx:72,  ty:60,  gx:74,  gy:66 },
-    {id:1, label:"↗", tx:168, ty:60,  gx:166, gy:66 },
-    {id:2, label:"⦿", tx:120, ty:76,  gx:120, gy:86 },
-    {id:3, label:"↙", tx:74,  ty:104, gx:76,  gy:100},
-    {id:4, label:"↘", tx:166, ty:104, gx:164, gy:100},
+    {id:0, tx:72,  ty:60 }, {id:1, tx:120, ty:58 }, {id:2, tx:168, ty:60 },
+    {id:3, tx:72,  ty:82 }, {id:4, tx:120, ty:82 }, {id:5, tx:168, ty:82 },
+    {id:6, tx:72,  ty:104}, {id:7, tx:120, ty:104}, {id:8, tx:168, ty:104},
   ];
+  const tierOf = (id)=> (id===4 ? "centre" : ([0,2,6,8].indexOf(id)>=0 ? "corner" : "edge"));
+  const ONTARGET = { GREEN:0.97, AMBER:0.90, RED:0.70 };
+  const SAVE = {
+    corner:{ GREEN:0.30, AMBER:0.55, RED:0.80 },
+    edge:  { GREEN:0.45, AMBER:0.65, RED:0.85 },
+    centre:{ GREEN:0.60, AMBER:0.75, RED:0.90 },
+  };
+  const PREAD = 0.15; // flat: keeper dives at your exact spot 15% of the time, else random
+
   const cvs   = React.useRef(null);
   const raf   = React.useRef(0);
   const timers= React.useRef([]);
+  const savedRef=React.useRef(false), awaitingRef=React.useRef(false);
+  const initScores=(()=>{ try{ return JSON.parse(localStorage.getItem("wc26_pen_scores")||"[]"); }catch(e){ return []; } })();
+  const scoresRef=React.useRef(initScores);
   const g = React.useRef({
-    phase:"aim", t:0, start:0, player:0, keeperZ:2,
-    bx:120, by:150, kx:120, ky:92,
+    phase:"aim", t:0, start:0, player:0, keeperZ:4, quality:null, outcome:null,
+    bx:120, by:150, tx:120, ty:60, kx:120, ky:86,
+    sliderPos:0.5, sliderDir:1, sliderSpeed:1.1, sLast:0, greenC:0.5, greenW:0.30, amberW:0.10,
     streak:0, best:Number(localStorage.getItem("wc26_pen_best")||0),
-    msg:"TAP A ZONE", res:null
+    msg:"PICK A SPOT", res:null
   });
-  const [ui,setUi] = React.useState({streak:0, best:g.current.best, phase:"aim", msg:"TAP A ZONE", res:null});
+  const [ui,setUi] = React.useState({streak:0, best:g.current.best, phase:"aim", msg:"PICK A SPOT", res:null});
   const sync=()=>{ const m=g.current; setUi({streak:m.streak,best:m.best,phase:m.phase,msg:m.msg,res:m.res}); };
-  const [scores,setScores] = React.useState(()=>{ try{ return JSON.parse(localStorage.getItem("wc26_pen_scores")||"[]"); }catch(e){ return []; } });
+  const [scores,setScoresState] = React.useState(initScores);
+  const setScores=(v)=>{ scoresRef.current=v; setScoresState(v); };
   const [nameInput,setNameInput] = React.useState("");
   const [saved,setSaved] = React.useState(false);
   const [online,setOnline] = React.useState(false);
 
   const lerp=(a,b,t)=>a+(b-a)*t;
   const easeOut=t=>1-Math.pow(1-t,2);
-  const px=(ctx,x,y,w,h,c)=>{ ctx.fillStyle=c; ctx.fillRect(x|0,y|0,w,h); };
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const px=(ctx,x,y,w,h,c)=>{ ctx.fillStyle=c; ctx.fillRect(x|0,y|0,Math.ceil(w),Math.ceil(h)); };
 
-  function drawKeeper(ctx,cx,cy,dive){
-    const k=PEN.kit, k2=PEN.kit2, gl=PEN.glove, sk=PEN.skin;
+  function drawKeeper(ctx,cx,cy,dx,dy){
+    const k=PEN.kit,k2=PEN.kit2,gl=PEN.glove,sk=PEN.skin,cap=PEN.cap;
     px(ctx,cx-5,cy+6,4,8,k2); px(ctx,cx+1,cy+6,4,8,k2);   // legs
     px(ctx,cx-6,cy-8,12,16,k); px(ctx,cx-6,cy-8,12,3,k2); // body
-    px(ctx,cx-4,cy-16,8,8,sk); px(ctx,cx-4,cy-16,8,2,PEN.ink); // head
-    if(dive===0){
+    px(ctx,cx-4,cy-16,8,8,sk);                            // head
+    px(ctx,cx-5,cy-18,10,4,cap);                          // Cech-style cap: crown
+    px(ctx,cx-5,cy-14,2,5,cap); px(ctx,cx+3,cy-14,2,5,cap); // ear flaps
+    px(ctx,cx-4,cy-9,8,1,cap);                            // chin strap
+    px(ctx,cx-2,cy-12,2,2,PEN.ink);                       // eye
+    if(dx===0 && dy<=0){
       px(ctx,cx-9,cy-14,3,10,k);  px(ctx,cx+6,cy-14,3,10,k);
       px(ctx,cx-10,cy-18,5,5,gl); px(ctx,cx+6,cy-18,5,5,gl);
     } else {
-      const s=dive;
-      px(ctx, s>0?cx+5:cx-8,  cy-6, 3,12, k);
-      px(ctx, s>0?cx+8:cx-13, cy+4, 6,6,  gl);
-      px(ctx, s>0?cx-9:cx+6,  cy-2, 3,8,  k);
+      const s = dx>=0?1:-1;
+      const ay = dy<0 ? cy-12 : (dy>0 ? cy+2 : cy-5);
+      px(ctx, s>0?cx+5:cx-8,  ay,   3,12, k);   // reaching arm
+      px(ctx, s>0?cx+8:cx-13, ay+8, 6,6,  gl);  // far glove
+      px(ctx, s>0?cx-9:cx+6,  cy-2, 3,8,  k);   // trailing arm
       px(ctx, s>0?cx-11:cx+8, cy+2, 5,5,  gl);
     }
+  }
+
+  function drawSlider(ctx,m){
+    const x0=26, x1=214, w=x1-x0, y=160, bh=8;
+    px(ctx,x0-2,y-2,w+4,bh+4,PEN.ink);
+    px(ctx,x0,y,w,bh,PEN.sred);
+    const seg=(a,b,col)=>{ const L=clamp(a,0,1),R=clamp(b,0,1); if(R>L) px(ctx,x0+L*w,y,(R-L)*w,bh,col); };
+    seg(m.greenC-m.greenW/2-m.amberW, m.greenC+m.greenW/2+m.amberW, PEN.samber);
+    seg(m.greenC-m.greenW/2,          m.greenC+m.greenW/2,          PEN.sgreen);
+    const mx = x0 + clamp(m.sliderPos,0,1)*w;
+    px(ctx, mx-1, y-4, 3, bh+8, PEN.post);
   }
 
   function draw(){
@@ -384,64 +415,106 @@ function Penalty(){
         px(ctx,z.tx-1,z.ty-1,2,2,on?PEN.goldT:PEN.net);
       });
     }
-    const dive = m.phase==="aim" ? 0 : (Math.abs(m.kx-120)<6 ? 0 : (m.kx>120?1:-1));
-    drawKeeper(ctx,m.kx,m.ky,dive);
+    let dx=0,dy=0;
+    if(m.phase==="kick"||m.phase==="over"){ const kz=ZONES[m.keeperZ]; dx=Math.sign(kz.tx-120); dy=Math.sign(kz.ty-82); }
+    drawKeeper(ctx,m.kx,m.ky,dx,dy);
     px(ctx,m.bx-4,m.by-4,8,8,PEN.ball);
     px(ctx,m.bx-4,m.by-4,8,1,PEN.ink);
     px(ctx,m.bx-4,m.by+3,8,1,PEN.ink);
     px(ctx,m.bx-1,m.by-2,2,2,PEN.ink);
+    if(m.phase==="strike") drawSlider(ctx,m);
   }
 
-  function resolve(){
+  // ---- aim: choose a spot, then launch the timing slider ----
+  function pickSpot(id){
     const m=g.current;
-    const saved=(m.keeperZ===m.player) && (Math.random()>0.12);
-    if(saved){
-      m.res="SAVED"; m.phase="over"; m.msg="SAVED!";
-      if(m.streak>m.best){ m.best=m.streak; localStorage.setItem("wc26_pen_best",String(m.best)); }
-    } else {
-      m.res="GOAL"; m.streak+=1; m.msg=["GOAL!","TOP BINS!","GOLAZO!","SCORED!"][m.streak%4];
-      const t=setTimeout(()=>{
-        const mm=g.current;
-        mm.phase="aim"; mm.res=null; mm.t=0; mm.bx=120; mm.by=150; mm.kx=120; mm.ky=92; mm.msg="TAP A ZONE";
-        draw(); sync();
-      },820);
-      timers.current.push(t);
-    }
-    draw(); sync();
+    if(m.phase!=="aim") return;
+    m.player=id;
+    m.greenW = clamp(0.30 - m.streak*0.009, 0.09, 0.30);  // green shrinks with streak (only ramp)
+    m.amberW = 0.10;
+    const margin = m.greenW/2 + 0.05;
+    m.greenC = margin + Math.random()*(1-2*margin);       // random green position each shot
+    m.sliderSpeed = Math.min(2.4, 1.05 + m.streak*0.05);
+    m.sliderPos = Math.random(); m.sliderDir = Math.random()<0.5?-1:1; m.sLast=0;
+    m.phase="strike"; m.res=null; m.msg="TIME THE STRIKE!";
+    sync();
+    cancelAnimationFrame(raf.current); raf.current=requestAnimationFrame(sliderStep);
+  }
+
+  function sliderStep(ts){
+    const m=g.current; if(m.phase!=="strike") return;
+    if(!m.sLast) m.sLast=ts;
+    const dt=Math.min(0.05,(ts-m.sLast)/1000); m.sLast=ts;
+    m.sliderPos += m.sliderDir*m.sliderSpeed*dt;
+    if(m.sliderPos>=1){ m.sliderPos=1; m.sliderDir=-1; }
+    if(m.sliderPos<=0){ m.sliderPos=0; m.sliderDir=1; }
+    draw();
+    raf.current=requestAnimationFrame(sliderStep);
+  }
+
+  // ---- strike: stop the slider, roll keeper + outcome, launch the kick ----
+  function strike(){
+    const m=g.current;
+    if(m.phase!=="strike") return;
+    cancelAnimationFrame(raf.current);
+    const d=Math.abs(m.sliderPos-m.greenC);
+    m.quality = d<=m.greenW/2 ? "GREEN" : (d<=m.greenW/2+m.amberW ? "AMBER" : "RED");
+    m.keeperZ = Math.random()<PREAD ? m.player : Math.floor(Math.random()*9);
+    if(Math.random() > ONTARGET[m.quality]) m.outcome="MISS";
+    else if(m.keeperZ!==m.player) m.outcome="GOAL";
+    else m.outcome = Math.random() < SAVE[tierOf(m.player)][m.quality] ? "SAVED" : "GOAL";
+    const z=ZONES[m.player];
+    if(m.outcome==="MISS"){
+      if(z.ty<82 || Math.random()<0.5){ m.tx=z.tx; m.ty=26; }                 // over the bar
+      else { m.tx = z.tx<120?24:(z.tx>120?216:(Math.random()<0.5?24:216)); m.ty=z.ty; } // wide
+    } else { m.tx=z.tx; m.ty=z.ty; }
+    m.t=0; m.start=0; m.phase="kick"; m.msg="…"; m.res=null;
+    sync();
+    raf.current=requestAnimationFrame(step);
   }
 
   function step(ts){
     const m=g.current;
     if(!m.start) m.start=ts;
-    m.t=Math.min(1,(ts-m.start)/620);
-    const z=ZONES[m.player];
-    m.bx=lerp(120,z.tx,easeOut(m.t));
-    m.by=lerp(150,z.ty,easeOut(m.t));
+    m.t=Math.min(1,(ts-m.start)/600);
+    m.bx=lerp(120,m.tx,easeOut(m.t));
+    m.by=lerp(150,m.ty,easeOut(m.t));
     const kz=ZONES[m.keeperZ];
-    const kt=Math.max(0,(m.t-0.06)/0.94);
-    m.kx=lerp(120,kz.gx,easeOut(kt));
-    m.ky=lerp(92,kz.gy,easeOut(kt));
+    const kt=Math.max(0,(m.t-0.05)/0.95);
+    m.kx=lerp(120,kz.tx,easeOut(kt));
+    m.ky=lerp(86,kz.ty,easeOut(kt));
     draw();
     if(m.t<1) raf.current=requestAnimationFrame(step);
-    else resolve();
+    else finishKick();
   }
 
-  function shoot(zoneId){
+  function finishKick(){
     const m=g.current;
-    if(m.phase!=="aim") return;
-    m.player=zoneId;
-    const pSmart=Math.min(0.18+m.streak*0.045,0.72);   // keeper reads you better as the streak grows
-    m.keeperZ = Math.random()<pSmart ? zoneId : Math.floor(Math.random()*5);
-    m.phase="kick"; m.t=0; m.start=0; m.res=null; m.msg="…";
-    sync();
-    raf.current=requestAnimationFrame(step);
+    if(m.outcome==="GOAL"){
+      m.res="GOAL"; m.streak+=1; m.msg=["GOAL!","TOP BINS!","GOLAZO!","SCORED!","BURIED IT!"][m.streak%5];
+      const t=setTimeout(()=>{
+        const mm=g.current;
+        mm.phase="aim"; mm.res=null; mm.t=0; mm.bx=120; mm.by=150; mm.kx=120; mm.ky=86; mm.msg="PICK A SPOT";
+        draw(); sync();
+      },820);
+      timers.current.push(t);
+    } else {
+      m.phase="over";
+      if(m.outcome==="SAVED"){ m.res="SAVED"; m.msg="SAVED!"; }
+      else { m.res="MISS"; m.msg=["OFF TARGET!","OVER THE BAR!","WIDE!","SKIED IT!"][Math.floor(Math.random()*4)]; }
+      if(m.streak>m.best){ m.best=m.streak; try{localStorage.setItem("wc26_pen_best",String(m.best));}catch(e){} }
+      savedRef.current=false; setSaved(false); setNameInput("");
+      const list=scoresRef.current;
+      awaitingRef.current = m.streak>0 && (list.length<5 || m.streak>list[list.length-1].score);
+    }
+    draw(); sync();
   }
 
   function retry(){
     const m=g.current;
-    m.phase="aim"; m.t=0; m.res=null; m.streak=0;
-    m.bx=120; m.by=150; m.kx=120; m.ky=92; m.player=0; m.msg="TAP A ZONE";
-    setSaved(false); setNameInput("");
+    m.phase="aim"; m.t=0; m.res=null; m.streak=0; m.outcome=null; m.quality=null;
+    m.bx=120; m.by=150; m.kx=120; m.ky=86; m.player=0; m.msg="PICK A SPOT";
+    savedRef.current=false; awaitingRef.current=false; setSaved(false); setNameInput("");
     draw(); sync();
   }
 
@@ -453,29 +526,31 @@ function Penalty(){
       .catch(()=>setOnline(false));
     const onKey=(e)=>{
       if(e.target && (e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")) return;
-      if(g.current.phase==="over" && (e.key==="Enter"||e.key===" ")){ e.preventDefault(); retry(); return; }
-      const map={"q":0,"e":1,"s":2," ":2,"z":3,"c":4,"7":0,"9":1,"5":2,"1":3,"3":4};
-      const k=e.key.toLowerCase();
-      if(k in map){ e.preventDefault(); shoot(map[k]); }
+      const m=g.current;
+      if(m.phase==="aim"){ const map={"7":0,"8":1,"9":2,"4":3,"5":4,"6":5,"1":6,"2":7,"3":8}; if(e.key in map){ e.preventDefault(); pickSpot(map[e.key]); } return; }
+      if(m.phase==="strike"){ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); strike(); } return; }
+      if(m.phase==="over"){ if((e.key==="Enter"||e.key===" ") && !awaitingRef.current){ e.preventDefault(); retry(); } return; }
     };
     window.addEventListener("keydown",onKey);
     return ()=>{ window.removeEventListener("keydown",onKey); cancelAnimationFrame(raf.current); timers.current.forEach(clearTimeout); };
   },[]);
 
-  const PadBtn=({id,label})=>(
-    <button onClick={()=>shoot(id)} disabled={ui.phase!=="aim"}
-      style={{width:"100%",fontFamily:"'Press Start 2P',monospace",fontSize:9,lineHeight:1.5,
+  const PAD = [["↖",0],["↑",1],["↗",2],["←",3],["●",4],["→",5],["↙",6],["↓",7],["↘",8]];
+  const PadBtn=({label,id})=>(
+    <button onClick={()=>pickSpot(id)} disabled={ui.phase!=="aim"} aria-label={"Shoot spot "+(id+1)}
+      style={{fontFamily:"'Press Start 2P',monospace",fontSize:13,
         color:ui.phase==="aim"?C.text:C.dim, background:C.panel2,
         border:"2px solid "+(ui.phase==="aim"?PEN.goldT:C.line), borderRadius:8,
-        padding:"12px 6px", cursor:ui.phase==="aim"?"pointer":"default",
+        padding:"12px 0", cursor:ui.phase==="aim"?"pointer":"default",
         boxShadow:ui.phase==="aim"?"0 3px 0 "+PEN.kit2:"none", touchAction:"manipulation"}}>{label}</button>
   );
 
   const qualifies = ui.streak>0 && (scores.length<5 || ui.streak>scores[scores.length-1].score);
   async function saveScore(){
+    awaitingRef.current=false;
     const nm=(nameInput.trim()||"YOU").toUpperCase().slice(0,10);
     const sc=g.current.streak;
-    setSaved(true); setNameInput("");
+    savedRef.current=true; setSaved(true); setNameInput("");
     if(online){
       try{
         const r=await fetch("/api/scores",{method:"POST",headers:{"Content-Type":"application/json"},
@@ -491,6 +566,8 @@ function Penalty(){
     try{ localStorage.setItem("wc26_pen_scores",JSON.stringify(next)); }catch(e){}
   }
 
+  const resColor = ui.res==="GOAL" ? PEN.good : PEN.bad;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl p-3 flex items-center justify-between" style={{background:C.card,border:"1px solid "+C.lineSoft}}>
@@ -501,18 +578,20 @@ function Penalty(){
 
       <div className="relative mx-auto" style={{width:"100%",maxWidth:360}}>
         <canvas ref={cvs} width={W} height={H}
+          onPointerDown={(e)=>{ if(g.current.phase==="strike"){ e.preventDefault(); strike(); } }}
           style={{width:"100%",height:"auto",imageRendering:"pixelated",borderRadius:8,
-            border:"2px solid "+C.line, background:PEN.sky, display:"block", touchAction:"manipulation"}}/>
+            border:"2px solid "+C.line, background:PEN.sky, display:"block", touchAction:"manipulation",
+            cursor:ui.phase==="strike"?"pointer":"default"}}/>
         {ui.phase==="aim" && ZONES.map(z=>(
-          <button key={z.id} onClick={()=>shoot(z.id)} aria-label={"Shoot "+z.label}
+          <button key={z.id} onClick={()=>pickSpot(z.id)} aria-label={"Aim spot "+(z.id+1)}
             style={{position:"absolute",left:(z.tx/W*100)+"%",top:(z.ty/H*100)+"%",
-              transform:"translate(-50%,-50%)",width:"26%",height:"30%",
+              transform:"translate(-50%,-50%)",width:"24%",height:"15%",
               background:"transparent",border:"0",cursor:"pointer",touchAction:"manipulation"}}/>
         ))}
         {ui.res && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:16,
-              color:ui.res==="GOAL"?PEN.good:PEN.bad,textShadow:"2px 2px 0 "+PEN.ink}}>{ui.msg}</div>
+            <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:15,
+              color:resColor,textShadow:"2px 2px 0 "+PEN.ink}}>{ui.msg}</div>
           </div>
         )}
         {ui.phase==="over" && (
@@ -528,18 +607,18 @@ function Penalty(){
                   style={{fontFamily:"'Press Start 2P',monospace",fontSize:10,textAlign:"center",textTransform:"uppercase",
                     color:C.text,background:PEN.ink,border:"2px solid "+PEN.goldT,borderRadius:6,padding:"10px 8px",width:"78%",maxWidth:220,outline:"none"}}/>
                 <div className="flex items-center gap-4">
-                  <button onClick={saveScore}
+                  <button onClick={(e)=>{ e.stopPropagation(); saveScore(); }}
                     style={{fontFamily:"'Press Start 2P',monospace",fontSize:10,color:PEN.ink,background:PEN.goldT,
                       border:"0",borderRadius:6,padding:"10px 16px",cursor:"pointer",boxShadow:"0 3px 0 "+PEN.kit2}}>SAVE ✓</button>
-                  <button onClick={()=>setSaved(true)}
+                  <button onClick={(e)=>{ e.stopPropagation(); awaitingRef.current=false; savedRef.current=true; setSaved(true); }}
                     style={{fontFamily:"'Press Start 2P',monospace",fontSize:8,color:C.dim,background:"transparent",border:"0",cursor:"pointer"}}>SKIP</button>
                 </div>
               </React.Fragment>
             ) : (
               <React.Fragment>
-                <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:14,color:saved?PEN.good:PEN.bad,textShadow:"2px 2px 0 "+PEN.ink}}>{saved?"ON THE BOARD!":"SAVED!"}</div>
+                <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:14,color:saved?PEN.good:PEN.bad,textShadow:"2px 2px 0 "+PEN.ink}}>{saved?"ON THE BOARD!":ui.msg}</div>
                 <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:9,color:C.sub}}>STREAK {ui.streak} · BEST {ui.best}</div>
-                <button onClick={retry}
+                <button onClick={(e)=>{ e.stopPropagation(); retry(); }}
                   style={{fontFamily:"'Press Start 2P',monospace",fontSize:10,color:PEN.ink,background:PEN.goldT,
                     border:"0",borderRadius:6,padding:"12px 18px",cursor:"pointer",boxShadow:"0 3px 0 "+PEN.kit2}}>RETRY ▶</button>
               </React.Fragment>
@@ -548,13 +627,16 @@ function Penalty(){
         )}
       </div>
 
-      <div className="grid mx-auto" style={{width:"100%",maxWidth:360,gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <PadBtn id={0} label="↖ TOP LEFT"/>
-        <PadBtn id={1} label="TOP RIGHT ↗"/>
-        <div style={{gridColumn:"1 / -1"}}><PadBtn id={2} label="⦿ DOWN THE MIDDLE"/></div>
-        <PadBtn id={3} label="↙ LOW LEFT"/>
-        <PadBtn id={4} label="LOW RIGHT ↘"/>
-      </div>
+      {ui.phase==="strike" ? (
+        <button onClick={strike} className="mx-auto"
+          style={{width:"100%",maxWidth:360,fontFamily:"'Press Start 2P',monospace",fontSize:13,color:PEN.ink,
+            background:PEN.good,border:"0",borderRadius:10,padding:"16px",cursor:"pointer",
+            boxShadow:"0 4px 0 #2a8a55",touchAction:"manipulation"}}>⚡ STRIKE! (hit the green)</button>
+      ) : (
+        <div className="grid mx-auto" style={{width:"100%",maxWidth:360,gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+          {PAD.map(([label,id])=>(<PadBtn key={id} label={label} id={id}/>))}
+        </div>
+      )}
 
       <div className="rounded-xl overflow-hidden mx-auto" style={{width:"100%",maxWidth:360,border:"1px solid "+C.lineSoft}}>
         <div style={{background:C.panel,padding:"10px 12px",textAlign:"center"}}>
@@ -573,8 +655,9 @@ function Penalty(){
       </div>
 
       <div style={{fontSize:12,color:C.dim,lineHeight:1.5,textAlign:"center"}}>
-        Tap a corner of the goal — or a button — to shoot. The keeper guesses a side; score to build your streak,
-        one save ends the run. The keeper reads you better the longer you last. <span style={{color:C.sub}}>Desktop: Q/E top · Z/C bottom · S centre · Enter to retry.</span>
+        Pick one of 9 spots, then <b style={{color:C.sub}}>tap / Space</b> to stop the bar in the <span style={{color:PEN.good}}>green</span> for a clean strike.
+        The keeper only saves if it dives to your exact spot — and even then a green strike can beat it. Corners are safest, the middle riskiest.
+        A scuffed strike can miss entirely. One save or miss ends the run.
       </div>
     </div>
   );
