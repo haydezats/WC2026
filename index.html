@@ -247,11 +247,113 @@ function Schedule(){
   );
 }
 
+/* ---------- Olé Olé Olé celebration overlay ---------- */
+function OleParty({onClose}){
+  const cvs=React.useRef(null), raf=React.useRef(0), last=React.useRef(0), t0=React.useRef(0), parts=React.useRef([]);
+  const [stage,setStage]=React.useState("go");
+  const [closing,setClosing]=React.useState(false);
+  const DUR=5000;
+
+  React.useEffect(()=>{
+    const c=cvs.current; if(!c) return;
+    const COLORS=["#E8B23A","#F0697D","#3FD08B","#5AA9F0","#B98BF0","#F0A35A","#5AE0F0","#ffffff"];
+    const fit=()=>{ c.width=c.clientWidth||window.innerWidth; c.height=c.clientHeight||window.innerHeight; };
+    fit();
+    const spawn=()=>({ x:Math.random()*c.width, y:-Math.random()*c.height*0.6, vy:90+Math.random()*160,
+      vx:(Math.random()-0.5)*60, w:5+Math.random()*6, h:9+Math.random()*16, rot:Math.random()*Math.PI,
+      vr:(Math.random()-0.5)*8, col:COLORS[(Math.random()*COLORS.length)|0], rib:Math.random()<0.5 });
+    const N=Math.max(70, Math.min(180, Math.floor(c.width/7)));
+    parts.current=Array.from({length:N}, spawn);
+
+    const px=(ctx,x,y,w,h,col)=>{ ctx.fillStyle=col; ctx.fillRect(x|0,y|0,Math.ceil(w),Math.ceil(h)); };
+
+    function drawStar(ctx, cx, baseY, P, el){
+      const SW=16, SH=26, top=baseY-SH*P;
+      const sway=Math.round(Math.sin(el/140));
+      const frame=Math.floor(el/170)%2;
+      const B=(ux,uy,uw,uh,col)=>px(ctx, cx+(ux-SW/2)*P+sway*P, top+uy*P, uw*P, uh*P, col);
+      const sk="#d79a5b", hair="#1c1410", shirt="#f4f7ff", shirt2="#cfd6e6",
+            pants="#16223c", shoe="#0b0f17", mic="#9aa6c4", micH="#2a2f3a";
+      // podium
+      px(ctx, cx-10*P+sway*P*0, baseY, 20*P, 8*P, "#E8B23A");
+      px(ctx, cx-10*P, baseY, 20*P, 2*P, "#f1cb74");
+      px(ctx, cx-3*P, baseY+3*P, 6*P, 4*P, "#b97f12");
+      px(ctx, cx-1*P, baseY+3*P, 2*P, 4*P, "#f1cb74"); // "1"
+      // legs
+      if(frame){ B(5,17,3,8,pants); B(9,17,3,6,pants); } else { B(5,17,3,6,pants); B(9,17,3,8,pants); }
+      B(4,24,4,2,shoe); B(9,24,4,2,shoe);
+      // shirt + open chest
+      B(4,8,8,9,shirt); B(4,8,8,2,shirt2); B(7,8,2,5,sk);
+      // hip arm
+      B(2,9,2,6,sk);
+      // raised arm + microphone
+      B(12,3,2,8,sk); B(12,1,2,2,sk); B(12,-3,2,4,mic); B(11,-5,4,2,micH);
+      // neck + head
+      B(6,7,4,2,sk); B(5,2,6,5,sk);
+      B(5,0,6,2,hair); B(4,2,1,4,hair); B(11,2,1,4,hair);
+      B(6,4,1,1,hair); B(9,4,1,1,hair);
+    }
+
+    const loop=(ts)=>{
+      if(!t0.current) t0.current=ts;
+      if(!last.current) last.current=ts;
+      const el=ts-t0.current;
+      let dt=(ts-last.current)/1000; last.current=ts; if(dt>0.05) dt=0.05;
+      const ctx=c.getContext("2d"); const W=c.width, H=c.height;
+      ctx.clearRect(0,0,W,H);
+      ctx.fillStyle="rgba(8,12,22,0.80)"; ctx.fillRect(0,0,W,H);
+      parts.current.forEach(p=>{
+        p.vy+=150*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.rot+=p.vr*dt;
+        if(p.y>H+24){ p.y=-20; p.x=Math.random()*W; p.vy=90+Math.random()*160; }
+        ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.fillStyle=p.col;
+        if(p.rib) ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); else ctx.fillRect(-p.w/2,-p.w/2,p.w,p.w);
+        ctx.restore();
+      });
+      const show = el>350 || (Math.floor(el/80)%2===0); // flash-in
+      if(show){
+        const P=Math.max(5, Math.min(14, Math.round(Math.min(W,H)/55)));
+        drawStar(ctx, W/2, H*0.80, P, el);
+      }
+      if(el>=DUR){ onClose(); return; }
+      raf.current=requestAnimationFrame(loop);
+    };
+    raf.current=requestAnimationFrame(loop);
+    const t1=setTimeout(()=>setStage("ole"),1500);
+    const t2=setTimeout(()=>setClosing(true),4600);
+    window.addEventListener("resize",fit);
+    return ()=>{ cancelAnimationFrame(raf.current); clearTimeout(t1); clearTimeout(t2); window.removeEventListener("resize",fit); };
+  },[]);
+
+  return (
+    <div onPointerDown={onClose}
+      style={{position:"fixed",inset:0,zIndex:9999,cursor:"pointer",opacity:closing?0:1,transition:"opacity .4s ease"}}>
+      <style>{`@keyframes olePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+        @keyframes oleDrop{from{transform:translateY(-40px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+      <canvas ref={cvs} style={{position:"absolute",inset:0,width:"100%",height:"100%",display:"block"}}/>
+      <div style={{position:"absolute",top:"15%",left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
+        <div key={stage} style={{display:"inline-block",fontFamily:"'Press Start 2P',monospace",
+          fontSize:stage==="ole"?"min(9vw,46px)":"min(7vw,34px)",
+          color:stage==="ole"?"#E8B23A":"#3FD08B",
+          textShadow:"3px 3px 0 #0b0f17, 0 0 18px "+(stage==="ole"?"#E8B23A99":"#3FD08B99"),
+          animation:"oleDrop .25s ease, olePulse .7s ease-in-out infinite",letterSpacing:2}}>
+          {stage==="ole"?"OLÉ OLÉ OLÉ!":"GO GO GO!"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Leaderboard ---------- */
 function Leaderboard(){
   const {rows,live}=useMemo(()=>standings(),[]);
+  const [party,setParty]=React.useState(false);
   return (
     <div className="flex flex-col gap-5">
+      {party && <OleParty onClose={()=>setParty(false)}/>}
+      <button onClick={()=>setParty(true)}
+        style={{fontFamily:"'Press Start 2P',monospace",fontSize:13,color:C.ink,letterSpacing:1,
+          background:"linear-gradient(90deg,#E8B23A,#F0A35A)",border:"0",borderRadius:12,
+          padding:"14px",cursor:"pointer",boxShadow:"0 4px 0 #b97f12"}}>🎉 OLÉ OLÉ OLÉ 🎉</button>
       {/* scoring system */}
       <div className="rounded-xl p-4" style={{background:C.card,border:"1px solid "+C.lineSoft}}>
         <div className="flex items-center gap-2 mb-3">
