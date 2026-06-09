@@ -100,6 +100,21 @@ const OWNER_MAP = {};
 (DATA.members||[]).forEach(m=>{ (m.teams||[]).forEach(t=>{ OWNER_MAP[t]=m.shortName; }); });
 const ownerOf = t => OWNER_MAP[t] || null;
 
+/* ---------- API-Football helpers ---------- */
+// API-Football names that differ from our dataset's names
+const API_ALIAS = { "Czech Republic":"Czechia", "Congo DR":"DR Congo", "Cape Verde Islands":"Cape Verde" };
+const apiTeamName = n => API_ALIAS[n] || n;
+const ownerOfApi = n => ownerOf(apiTeamName(n));
+async function fbFetch(path, params){
+  const qs = new URLSearchParams(Object.assign({path:path}, params||{})).toString();
+  const r = await fetch("/api/football?"+qs, {cache:"no-store"});
+  let j=null; try{ j=await r.json(); }catch(e){}
+  if(!r.ok){ const e=new Error("http"); e.code=r.status; throw e; }
+  const errs = j && j.errors;
+  if(errs && !Array.isArray(errs) && Object.keys(errs).length){ const e=new Error(Object.values(errs)[0]); e.api=true; throw e; }
+  return (j && j.response) || [];
+}
+
 /* ---------- UI atoms ---------- */
 const Badge = ({g}) => (
   <span className="inline-flex items-center justify-center rounded-md font-bold"
@@ -1045,6 +1060,169 @@ function Divers(){
   );
 }
 
+/* ---------- Live (API-Football, stable-tagged) ---------- */
+function ApiTeam({team}){
+  const o = team && ownerOfApi(team.name);
+  const win = team && team.winner===true;
+  return (
+    <span className="inline-flex items-center gap-1" style={{minWidth:0}}>
+      {team && team.logo
+        ? <img src={team.logo} alt="" width="18" height="18" style={{objectFit:"contain",flex:"0 0 auto"}}/>
+        : <span style={{flex:"0 0 auto"}}>{flag(apiTeamName(team?team.name:""))}</span>}
+      <span style={{color:win?C.gold:C.text,fontWeight:win?800:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{team?team.name:"—"}</span>
+      {o && <span style={{fontSize:10,fontWeight:700,color:C.gold,background:C.gold+"18",border:"1px solid "+C.gold+"44",borderRadius:4,padding:"0 4px",letterSpacing:.3,flex:"0 0 auto"}}>{o}</span>}
+    </span>
+  );
+}
+function fbStatus(st){
+  const s=st.short;
+  if(["1H","2H","ET","BT","P","LIVE"].includes(s)) return {live:true,label:st.elapsed?(st.elapsed+"'"):"LIVE"};
+  if(s==="HT") return {live:true,label:"HT"};
+  if(["FT","AET","PEN"].includes(s)) return {done:true,label:s==="PEN"?"PENS":"FT"};
+  if(["PST","CANC","ABD","SUSP","INT"].includes(s)) return {label:s};
+  return {ns:true,label:null};
+}
+function LiveLoading(){ return <div style={{fontFamily:"'Press Start 2P',monospace",fontSize:9,color:C.sub,padding:"18px",textAlign:"center"}}>LOADING…</div>; }
+function LiveError({err,onRetry}){
+  const key = err && err.code===503;
+  return (
+    <div className="rounded-xl p-4 flex flex-col items-center gap-3" style={{background:C.card,border:"1px solid "+(key?C.gold+"44":C.lineSoft)}}>
+      <div style={{fontSize:13,color:C.text,textAlign:"center"}}>{key?"Live data isn't connected yet — add the API key in Vercel.":"Couldn't load live data right now."}</div>
+      {!key && <button onClick={onRetry} style={{fontSize:12,fontWeight:700,color:C.ink,background:C.gold,border:"0",borderRadius:8,padding:"8px 16px",cursor:"pointer"}}>Retry</button>}
+    </div>
+  );
+}
+
+function LiveFixtures(){
+  const [data,setData]=React.useState(null);
+  const [err,setErr]=React.useState(null);
+  const [loading,setLoading]=React.useState(true);
+  const [round,setRound]=React.useState(null);
+  const load=React.useCallback(()=>{
+    setLoading(true); setErr(null);
+    fbFetch("/fixtures",{league:1,season:2026})
+      .then(rows=>{ setData(rows); setLoading(false); })
+      .catch(e=>{ setErr(e); setLoading(false); });
+  },[]);
+  React.useEffect(()=>{ load(); },[load]);
+  const rounds=React.useMemo(()=>{ const s=[]; (data||[]).forEach(f=>{ const r=f.league.round; if(!s.includes(r)) s.push(r); }); return s; },[data]);
+  React.useEffect(()=>{
+    if(data && round===null && rounds.length){
+      const now=Date.now()/1000; let pick=rounds[0];
+      for(const r of rounds){ if((data.filter(f=>f.league.round===r)).some(f=>f.fixture.timestamp>=now-3*3600)){ pick=r; break; } }
+      setRound(pick);
+    }
+  },[data,rounds,round]);
+  if(loading && !data) return <LiveLoading/>;
+  if(err) return <LiveError err={err} onRetry={load}/>;
+  const games=(data||[]).filter(f=>f.league.round===round).sort((a,b)=>a.fixture.timestamp-b.fixture.timestamp);
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <div className="flex gap-1.5 flex-wrap" style={{flex:1}}>
+          {rounds.map(r=>(
+            <button key={r} onClick={()=>setRound(r)} className="rounded-full transition"
+              style={{padding:"4px 10px",fontSize:11,fontWeight:700,whiteSpace:"nowrap",
+                background:round===r?C.gold:C.card,color:round===r?C.ink:C.sub,border:"1px solid "+(round===r?"transparent":C.lineSoft)}}>
+              {r.replace("Group Stage - ","Round ")}
+            </button>
+          ))}
+        </div>
+        <button onClick={load} title="Refresh" style={{fontSize:12,color:C.sub,background:C.card,border:"1px solid "+C.lineSoft,borderRadius:8,padding:"5px 10px",cursor:"pointer"}}>{loading?"…":"↻"}</button>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {games.length===0 && <div style={{fontSize:13,color:C.dim,padding:"8px"}}>No fixtures in this round yet.</div>}
+        {games.map(f=>{
+          const st=fbStatus(f.fixture.status), g=f.goals, show=st.done||st.live;
+          return (
+            <div key={f.fixture.id} className="flex items-center gap-3 rounded-lg px-3 py-2"
+              style={{background:C.panel2,border:"1px solid "+(st.live?C.green+"66":C.lineSoft)}}>
+              <div style={{width:58,flex:"0 0 auto"}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.text}}>{fmt(f.fixture.date,"time")}</div>
+                <div style={{fontSize:10,color:C.dim}}>{fmt(f.fixture.date,"dayLabel")}</div>
+              </div>
+              <div className="flex-1 flex flex-col gap-1" style={{minWidth:0}}>
+                <div className="flex items-center justify-between gap-2"><ApiTeam team={f.teams.home}/><b style={{color:C.text,fontSize:13}}>{show?g.home:""}</b></div>
+                <div className="flex items-center justify-between gap-2"><ApiTeam team={f.teams.away}/><b style={{color:C.text,fontSize:13}}>{show?g.away:""}</b></div>
+              </div>
+              <div style={{width:42,flex:"0 0 auto",textAlign:"right"}}>
+                {st.live ? <span style={{fontSize:10,fontWeight:700,color:C.green}}>{st.label}</span>
+                  : st.done ? <span style={{fontSize:10,color:C.dim}}>{st.label}</span>
+                  : st.label ? <span style={{fontSize:9,color:C.dim}}>{st.label}</span>
+                  : <span style={{fontSize:9,color:C.dim}}>AEST</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LiveStandings(){
+  const [groups,setGroups]=React.useState(null);
+  const [err,setErr]=React.useState(null);
+  const [loading,setLoading]=React.useState(true);
+  const load=React.useCallback(()=>{
+    setLoading(true); setErr(null);
+    fbFetch("/standings",{league:1,season:2026})
+      .then(rows=>{ setGroups((rows[0]&&rows[0].league&&rows[0].league.standings)||[]); setLoading(false); })
+      .catch(e=>{ setErr(e); setLoading(false); });
+  },[]);
+  React.useEffect(()=>{ load(); },[load]);
+  if(loading && !groups) return <LiveLoading/>;
+  if(err) return <LiveError err={err} onRetry={load}/>;
+  if(!groups || groups.length===0) return (
+    <div className="rounded-xl p-4" style={{background:C.card,border:"1px solid "+C.lineSoft}}>
+      <div style={{fontSize:13,color:C.sub,lineHeight:1.5}}>Group tables go live once the tournament kicks off (11 Jun). Until then, see <b style={{color:C.text}}>Schedule</b> for the draw.</div>
+    </div>
+  );
+  return (
+    <div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))"}}>
+      {groups.map((rows,gi)=>(
+        <div key={gi} className="rounded-xl overflow-hidden" style={{border:"1px solid "+C.lineSoft}}>
+          <div style={{background:C.panel,padding:"8px 10px",fontSize:12,fontWeight:700,color:C.gold,letterSpacing:.3}}>{rows[0]&&rows[0].group}</div>
+          <div className="grid" style={{gridTemplateColumns:"20px 1fr 26px 28px 30px",fontSize:10,color:C.dim,padding:"6px 10px",background:C.panel2}}>
+            <div>#</div><div>TEAM</div><div style={{textAlign:"center"}}>P</div><div style={{textAlign:"center"}}>GD</div><div style={{textAlign:"center"}}>PTS</div>
+          </div>
+          {rows.map((r,i)=>(
+            <div key={r.team.id} className="grid items-center" style={{gridTemplateColumns:"20px 1fr 26px 28px 30px",padding:"7px 10px",background:i%2?C.card:C.panel2,borderTop:"1px solid "+C.lineSoft}}>
+              <div style={{fontSize:12,color:i<2?C.green:C.sub,fontWeight:700}}>{r.rank}</div>
+              <div style={{minWidth:0}}><ApiTeam team={r.team}/></div>
+              <div style={{textAlign:"center",fontSize:11,color:C.sub}}>{r.all.played}</div>
+              <div style={{textAlign:"center",fontSize:11,color:C.sub}}>{r.goalsDiff}</div>
+              <div style={{textAlign:"center",fontSize:12,color:C.text,fontWeight:700}}>{r.points}</div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Live(){
+  const [view,setView]=useState("fixtures");
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-xl p-3 flex items-center justify-between" style={{background:C.card,border:"1px solid "+C.lineSoft}}>
+        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:1,color:C.text}}>LIVE · WORLD CUP</span>
+        <span style={{fontSize:11,color:C.sub}}>via API-Football</span>
+      </div>
+      <div className="flex gap-1.5">
+        {[["fixtures","Fixtures & Results"],["standings","Standings"]].map(([id,l])=>(
+          <button key={id} onClick={()=>setView(id)} className="rounded-lg font-bold transition"
+            style={{padding:"6px 14px",fontSize:13,letterSpacing:.3,
+              background:view===id?C.card:"transparent",color:view===id?C.gold:C.sub,border:"1px solid "+(view===id?C.line:"transparent")}}>{l}</button>
+        ))}
+      </div>
+      {view==="fixtures"?<LiveFixtures/>:<LiveStandings/>}
+      <div style={{fontSize:11,color:C.dim,lineHeight:1.5}}>
+        Live scores, fixtures and group tables from API-Football — times in AEST. Teams owned in the sweepstakes carry a <span style={{color:C.gold}}>gold stable tag</span>. Cached to spare API quota; tap ↻ to refresh.
+      </div>
+    </div>
+  );
+}
+
 function App(){
   const [tab,setTab]=useState("schedule");
   return (
@@ -1074,7 +1252,7 @@ function App(){
 
         {/* main tabs */}
         <div className="flex gap-2 mt-5 mb-6">
-          {[["schedule","Schedule"],["leaderboard","Leaderboard"],["penalty","Penalties"],["divers","Divers"]].map(([id,lbl])=>(
+          {[["schedule","Schedule"],["live","Live"],["leaderboard","Leaderboard"],["penalty","Penalties"],["divers","Divers"]].map(([id,lbl])=>(
             <button key={id} onClick={()=>setTab(id)} className="rounded-xl font-bold transition flex-1 sm:flex-none"
               style={{padding:"10px 22px",fontSize:14,letterSpacing:.4,
                 background:tab===id?C.gold:C.card, color:tab===id?C.ink:C.text,
@@ -1083,6 +1261,7 @@ function App(){
         </div>
 
         {tab==="schedule"&&<Schedule/>}
+        {tab==="live"&&<Live/>}
         {tab==="leaderboard"&&<Leaderboard/>}
         {tab==="penalty"&&<Penalty/>}
         {tab==="divers"&&<Divers/>}
