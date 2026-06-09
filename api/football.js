@@ -16,13 +16,16 @@ const BASE = "https://v3.football.api-sports.io";
 const ALLOW = new Set([
   "/status", "/standings", "/fixtures", "/fixtures/events", "/fixtures/lineups",
   "/fixtures/statistics", "/fixtures/players", "/players", "/players/squads",
-  "/teams", "/teams/statistics", "/leagues",
+  "/teams", "/teams/statistics", "/leagues", "/predictions", "/odds", "/venues",
 ]);
 
 // Cache TTL (seconds) by endpoint. Lineups are static once posted → cache long when
 // they contain data, short while still empty (so we re-check as kickoff approaches).
 function ttlFor(path, hasData) {
   if (path.indexOf("lineups") >= 0) return hasData ? 21600 : 45;
+  if (path === "/predictions") return 3600; // updated hourly upstream
+  if (path === "/odds") return 1800;
+  if (path === "/venues") return 86400;
   if (path.indexOf("events") >= 0 || path.indexOf("players") >= 0) return hasData ? 600 : 30;
   if (path === "/standings" || path === "/fixtures" || path === "/fixtures/statistics") return 30;
   if (path === "/teams" || path === "/leagues" || path === "/players/squads") return 3600;
