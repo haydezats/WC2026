@@ -1085,6 +1085,16 @@ async function getPrediction(id){
   PREDICT_CACHE[id]=d; return d;
 }
 const pctNum = s => s ? (parseFloat(s)||0) : 0;
+const FORM_CACHE={}, SQUAD_CACHE={}, ODDS_CACHE={};
+async function getForm(teamId){ if(FORM_CACHE[teamId]) return FORM_CACHE[teamId]; const d=await fbFetch("/fixtures",{team:teamId,last:6}).catch(()=>[]); FORM_CACHE[teamId]=d; return d; }
+async function getSquad(teamId){ if(SQUAD_CACHE[teamId]) return SQUAD_CACHE[teamId]; const d=await fbFetch("/players/squads",{team:teamId}).catch(()=>[]); SQUAD_CACHE[teamId]=d; return d; }
+async function getOdds(fixtureId){ if(ODDS_CACHE[fixtureId]) return ODDS_CACHE[fixtureId]; const d=await fbFetch("/odds",{fixture:fixtureId}).catch(()=>[]); ODDS_CACHE[fixtureId]=d; return d; }
+function resultOf(f, teamId){
+  const st=f.fixture.status.short; if(["FT","AET","PEN"].indexOf(st)<0) return null;
+  if(f.goals.home==null||f.goals.away==null) return null;
+  const home=f.teams.home.id===teamId, gf=home?f.goals.home:f.goals.away, ga=home?f.goals.away:f.goals.home;
+  return { r: gf>ga?"W":(gf<ga?"L":"D"), gf:gf, ga:ga, opp:(home?f.teams.away:f.teams.home), date:f.fixture.date };
+}
 function ApiTeam({team}){
   const o = team && ownerOfApi(team.name);
   const win = team && team.winner===true;
@@ -1307,6 +1317,95 @@ function PitchXI({side,accent}){
     </div>
   );
 }
+function StadiumCard({venue}){
+  const [imgOk,setImgOk]=React.useState(true);
+  if(!venue||!venue.name) return null;
+  const src = venue.id?("https://media.api-sports.io/football/venues/"+venue.id+".png"):null;
+  return (
+    <div className="rounded-lg overflow-hidden" style={{border:"1px solid "+C.lineSoft,marginBottom:12}}>
+      {src&&imgOk&&<img src={src} alt="" onError={()=>setImgOk(false)} style={{width:"100%",height:120,objectFit:"cover",display:"block"}}/>}
+      <div style={{padding:"8px 10px"}}>
+        <div style={{fontSize:13,color:C.text,fontWeight:700}}>🏟️ {venue.name}</div>
+        {venue.city&&<div style={{fontSize:11,color:C.sub}}>{venue.city}</div>}
+      </div>
+    </div>
+  );
+}
+function OddsRow({fixtureId,home,away}){
+  const [d,setD]=React.useState(undefined);
+  React.useEffect(()=>{ let on=true; getOdds(fixtureId).then(r=>{ if(on) setD(r); }); return ()=>{on=false;}; },[fixtureId]);
+  if(d===undefined||!d.length) return null;
+  const bk=d[0].bookmakers&&d[0].bookmakers[0];
+  const bet=bk&&bk.bets&&bk.bets.find(b=>b.id===1||b.name==="Match Winner");
+  if(!bet) return null;
+  const od=v=>{ const x=bet.values.find(o=>o.value===v); return x?x.odd:"—"; };
+  return (
+    <div className="rounded-lg overflow-hidden" style={{border:"1px solid "+C.lineSoft,marginBottom:12}}>
+      <div style={{background:C.panel,padding:"8px 10px",fontSize:11,fontWeight:700,color:C.gold}}>ODDS <span style={{color:C.dim,fontWeight:400,fontSize:9}}>· {bk.name}</span></div>
+      <div className="grid" style={{gridTemplateColumns:"1fr 1fr 1fr",textAlign:"center"}}>
+        {[[home.name,od("Home")],["Draw",od("Draw")],[away.name,od("Away")]].map((c,i)=>(
+          <div key={i} style={{padding:"8px",borderLeft:i?"1px solid "+C.lineSoft:"none"}}>
+            <div style={{fontSize:9,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c[0]}</div>
+            <div style={{fontSize:15,fontWeight:700,color:C.text}}>{c[1]}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function FormPills({teamId,teamName}){
+  const [d,setD]=React.useState(undefined);
+  React.useEffect(()=>{ let on=true; getForm(teamId).then(r=>{ if(on) setD(r); }); return ()=>{on=false;}; },[teamId]);
+  const col={W:C.green,D:C.dim,L:C.red};
+  const games=(d||[]).map(f=>resultOf(f,teamId)).filter(Boolean).slice(0,5);
+  return (
+    <div className="flex items-center gap-2">
+      <span style={{width:96,fontSize:11,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:"0 0 auto"}}>{teamName}</span>
+      <div className="flex gap-1" style={{flex:1}}>
+        {d===undefined ? <span style={{fontSize:10,color:C.dim}}>…</span>
+          : games.length===0 ? <span style={{fontSize:10,color:C.dim}}>no recent matches</span>
+          : games.map((g,i)=>(
+              <span key={i} title={(g.opp&&g.opp.name)+" "+g.gf+"-"+g.ga}
+                style={{width:16,height:16,borderRadius:4,background:col[g.r],color:C.ink,fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{g.r}</span>
+            ))}
+      </div>
+      {games[0] && <span style={{fontSize:10,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{games[0].gf}-{games[0].ga} v {games[0].opp&&games[0].opp.name}</span>}
+    </div>
+  );
+}
+function SquadList({teamId,teamName,logo}){
+  const [d,setD]=React.useState(undefined);
+  React.useEffect(()=>{ let on=true; getSquad(teamId).then(r=>{ if(on) setD(r); }); return ()=>{on=false;}; },[teamId]);
+  const players=(d&&d[0]&&d[0].players)||[];
+  const order=["Goalkeeper","Defender","Midfielder","Attacker"];
+  return (
+    <div>
+      <div className="flex items-center gap-2" style={{marginBottom:6}}>{logo&&<img src={logo} width="16" height="16" alt="" style={{objectFit:"contain"}}/>}<b style={{fontSize:12,color:C.text}}>{teamName}</b></div>
+      {d===undefined ? <div style={{fontSize:11,color:C.dim}}>…</div>
+        : players.length===0 ? <div style={{fontSize:11,color:C.dim}}>Squad not published yet.</div>
+        : order.map(pos=>{ const ps=players.filter(p=>p.position===pos); if(!ps.length) return null;
+            return (
+              <div key={pos} style={{marginBottom:6}}>
+                <div style={{fontSize:9,color:C.dim,marginBottom:2}}>{pos.toUpperCase()}</div>
+                <div className="flex flex-wrap" style={{gap:"2px 12px"}}>{ps.map(p=><span key={p.id} style={{fontSize:11,color:C.sub}}><b style={{color:C.text}}>{p.number||"–"}</b> {p.name}</span>)}</div>
+              </div>
+            );
+          })}
+    </div>
+  );
+}
+function SquadSection({home,away}){
+  const [open,setOpen]=React.useState(false);
+  return (
+    <div className="rounded-lg overflow-hidden" style={{border:"1px solid "+C.lineSoft,marginBottom:12}}>
+      <button onClick={()=>setOpen(o=>!o)} className="w-full flex items-center justify-between" style={{background:C.panel,padding:"8px 10px",border:"0",cursor:"pointer"}}>
+        <span style={{fontSize:11,fontWeight:700,color:C.gold}}>SQUADS</span>
+        <span style={{fontSize:11,color:C.sub}}>{open?"▲ hide":"▼ show"}</span>
+      </button>
+      {open && <div className="flex flex-col gap-4" style={{padding:"10px 12px"}}><SquadList teamId={home.id} teamName={home.name} logo={home.logo}/><SquadList teamId={away.id} teamName={away.name} logo={away.logo}/></div>}
+    </div>
+  );
+}
 function PredictBlock({fixture}){
   const [d,setD]=React.useState(undefined);
   React.useEffect(()=>{ let on=true; setD(undefined); getPrediction(fixture.fixture.id).then(r=>{ if(on) setD((r&&r[0])||null); }); return ()=>{on=false;}; },[fixture]);
@@ -1388,7 +1487,17 @@ function MatchModal({fixture,onClose}){
             <div style={{flex:1}}><ApiTeam team={f.teams.away}/></div>
           </div>
           <div style={{textAlign:"center",fontSize:10,color:st.live?C.green:C.dim,marginBottom:12}}>{st.live?st.label:st.done?"Full Time":(st.label||"Not started")}</div>
+          <StadiumCard venue={f.fixture.venue}/>
           <PredictBlock fixture={f}/>
+          <OddsRow fixtureId={f.fixture.id} home={f.teams.home} away={f.teams.away}/>
+          <div className="rounded-lg overflow-hidden" style={{border:"1px solid "+C.lineSoft,marginBottom:12}}>
+            <div style={{background:C.panel,padding:"8px 10px",fontSize:11,fontWeight:700,color:C.gold}}>RECENT FORM</div>
+            <div className="flex flex-col gap-2" style={{padding:"10px 12px"}}>
+              <FormPills teamId={f.teams.home.id} teamName={f.teams.home.name}/>
+              <FormPills teamId={f.teams.away.id} teamName={f.teams.away.name}/>
+            </div>
+          </div>
+          <SquadSection home={f.teams.home} away={f.teams.away}/>
           {lu===undefined ? <LiveLoading/>
             : (!lu || lu.length===0) ? <div className="rounded-lg" style={{padding:"16px",background:C.panel2,border:"1px solid "+C.lineSoft,textAlign:"center",fontSize:12,color:C.sub}}>Line-ups drop about an hour before kick-off.</div>
             : <div className="flex flex-col gap-3"><PitchXI side={lu[0]} accent={C.gold}/><PitchXI side={lu[1]} accent={C.blue}/></div>}
