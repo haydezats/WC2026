@@ -1077,6 +1077,14 @@ function prefetchSoon(fixtures){
   const now=Date.now()/1000;
   (fixtures||[]).filter(f=>f.fixture.timestamp>now-2*3600 && f.fixture.timestamp<now+30*3600).slice(0,12).forEach(f=>getLineup(f.fixture.id));
 }
+// predictions (h2h is real pre-match; win%/comparison sharpen once games are played)
+const PREDICT_CACHE = {};
+async function getPrediction(id){
+  if(PREDICT_CACHE[id]) return PREDICT_CACHE[id];
+  const d = await fbFetch("/predictions",{fixture:id}).catch(()=>[]);
+  PREDICT_CACHE[id]=d; return d;
+}
+const pctNum = s => s ? (parseFloat(s)||0) : 0;
 function ApiTeam({team}){
   const o = team && ownerOfApi(team.name);
   const win = team && team.winner===true;
@@ -1299,6 +1307,66 @@ function PitchXI({side,accent}){
     </div>
   );
 }
+function PredictBlock({fixture}){
+  const [d,setD]=React.useState(undefined);
+  React.useEffect(()=>{ let on=true; setD(undefined); getPrediction(fixture.fixture.id).then(r=>{ if(on) setD((r&&r[0])||null); }); return ()=>{on=false;}; },[fixture]);
+  if(d===undefined) return <div className="rounded-lg" style={{padding:"12px",background:C.panel2,border:"1px solid "+C.lineSoft,textAlign:"center",fontSize:11,color:C.dim,marginBottom:12}}>Loading prediction…</div>;
+  if(!d) return null;
+  const p=d.predictions||{}, perc=p.percent||{}, cmp=d.comparison||{};
+  const h2h=(d.h2h||[]).slice().sort((a,b)=>b.fixture.timestamp-a.fixture.timestamp).slice(0,5);
+  const hp=pctNum(perc.home), dp=pctNum(perc.draw), ap=pctNum(perc.away);
+  const hasAdvice = p.advice && p.advice!=="No predictions available";
+  const metrics=[["form","Form"],["att","Attack"],["def","Defence"],["poisson_distribution","Poisson"],["h2h","H2H"],["total","Overall"]];
+  const anyCmp = metrics.some(([k])=> cmp[k] && (pctNum(cmp[k].home)+pctNum(cmp[k].away))>0);
+  return (
+    <div className="rounded-lg overflow-hidden" style={{border:"1px solid "+C.lineSoft,marginBottom:12}}>
+      <div style={{background:C.panel,padding:"8px 10px",fontSize:11,fontWeight:700,color:C.gold,letterSpacing:.3}}>MATCH PREDICTION</div>
+      <div style={{padding:"10px 12px"}}>
+        <div className="flex justify-between" style={{fontSize:10,color:C.sub,marginBottom:4,gap:6}}>
+          <span style={{color:C.gold,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.teams.home.name} {hp}%</span>
+          <span style={{flex:"0 0 auto"}}>Draw {dp}%</span>
+          <span style={{color:C.blue,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"right"}}>{ap}% {d.teams.away.name}</span>
+        </div>
+        <div className="flex" style={{height:10,borderRadius:5,overflow:"hidden",background:C.ink}}>
+          <div style={{width:hp+"%",background:C.gold}}/><div style={{width:dp+"%",background:C.dim}}/><div style={{width:ap+"%",background:C.blue}}/>
+        </div>
+        {hasAdvice
+          ? <div style={{fontSize:12,color:C.text,marginTop:8,lineHeight:1.4}}>💡 {p.advice}</div>
+          : <div style={{fontSize:11,color:C.dim,marginTop:8,lineHeight:1.4}}>Form-based prediction sharpens once group games are played.</div>}
+        {anyCmp && (
+          <div style={{marginTop:10}} className="flex flex-col gap-1.5">
+            {metrics.map(([k,lbl])=>{ const h=pctNum(cmp[k]&&cmp[k].home), a=pctNum(cmp[k]&&cmp[k].away); if(h+a===0) return null;
+              return (
+                <div key={k} className="flex items-center gap-2">
+                  <span style={{width:50,fontSize:9,color:C.dim,flex:"0 0 auto"}}>{lbl}</span>
+                  <div className="flex" style={{flex:1,height:8,borderRadius:4,overflow:"hidden",background:C.ink}}>
+                    <div style={{width:h+"%",background:C.gold}}/><div style={{width:a+"%",background:C.blue}}/>
+                  </div>
+                  <span style={{width:62,fontSize:9,color:C.sub,textAlign:"right",flex:"0 0 auto"}}>{h}·{a}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {h2h.length>0 && (
+          <div style={{marginTop:10}}>
+            <div style={{fontSize:9,color:C.dim,marginBottom:4}}>HEAD-TO-HEAD</div>
+            <div className="flex flex-col gap-1">
+              {h2h.map(m=>(
+                <div key={m.fixture.id} className="flex items-center" style={{fontSize:11}}>
+                  <span style={{color:C.dim,fontSize:10,width:34,flex:"0 0 auto"}}>{String(m.fixture.date).slice(0,4)}</span>
+                  <span style={{flex:1,textAlign:"right",color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.teams.home.name}</span>
+                  <span style={{padding:"0 8px",color:C.text,fontWeight:700,flex:"0 0 auto"}}>{m.goals.home}-{m.goals.away}</span>
+                  <span style={{flex:1,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.teams.away.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 function MatchModal({fixture,onClose}){
   const f=fixture;
   const [lu,setLu]=React.useState(undefined);
@@ -1320,6 +1388,7 @@ function MatchModal({fixture,onClose}){
             <div style={{flex:1}}><ApiTeam team={f.teams.away}/></div>
           </div>
           <div style={{textAlign:"center",fontSize:10,color:st.live?C.green:C.dim,marginBottom:12}}>{st.live?st.label:st.done?"Full Time":(st.label||"Not started")}</div>
+          <PredictBlock fixture={f}/>
           {lu===undefined ? <LiveLoading/>
             : (!lu || lu.length===0) ? <div className="rounded-lg" style={{padding:"16px",background:C.panel2,border:"1px solid "+C.lineSoft,textAlign:"center",fontSize:12,color:C.sub}}>Line-ups drop about an hour before kick-off.</div>
             : <div className="flex flex-col gap-3"><PitchXI side={lu[0]} accent={C.gold}/><PitchXI side={lu[1]} accent={C.blue}/></div>}
