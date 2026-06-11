@@ -35,16 +35,6 @@ module.exports = async (req, res) => {
   try {
     const c = await getClient();
 
-    // TEMP one-time reset (remove after use): /api/scores?action=reset&game=penalty&token=...
-    if (req.method === "GET" && req.query && req.query.action === "reset") {
-      if (req.query.token !== "rk_8sJ2zQ7mVx") { res.status(403).json({ error: "forbidden" }); return; }
-      const key = keyFor(req.query.game);
-      await c.del(key);
-      res.setHeader("Cache-Control", "no-store");
-      res.status(200).json({ reset: key });
-      return;
-    }
-
     if (req.method === "GET") {
       const key = keyFor(req.query && req.query.game);
       res.setHeader("Cache-Control", "no-store");
