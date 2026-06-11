@@ -102,7 +102,7 @@ function standings(){
 /* ---------- live scoring from API-Football results ---------- */
 function liveTeamStats(fixtures){
   const s={};
-  const bump=(apiName,tp,gf,ga)=>{ const t=apiTeamName(apiName); if(!s[t]) s[t]={tp:0,gf:0,ga:0,p:0}; s[t].tp+=tp; s[t].gf+=gf; s[t].ga+=ga; s[t].p+=1; };
+  const bump=(apiName,tp,gf,ga)=>{ const t=apiTeamName(apiName); if(!s[t]) s[t]={tp:0,gf:0,ga:0,w:0,d:0,l:0,p:0}; s[t].tp+=tp; s[t].gf+=gf; s[t].ga+=ga; s[t].p+=1; if(tp===3)s[t].w++; else if(tp===1)s[t].d++; else s[t].l++; };
   (fixtures||[]).forEach(f=>{
     const st=f.fixture.status.short; if(["FT","AET","PEN"].indexOf(st)<0) return;
     const h=f.goals.home, a=f.goals.away; if(h==null||a==null) return;
@@ -122,8 +122,8 @@ function liveChampion(fixtures){
 function buildStandings(ts, champ){
   const anyPlayed=Object.keys(ts).length>0;
   const drafted=DATA.members.some(m=>m.teams.length>0);
-  const rows=DATA.members.map(m=>{ let tp=0,gf=0,ga=0; m.teams.forEach(t=>{ if(ts[t]){tp+=ts[t].tp;gf+=ts[t].gf;ga+=ts[t].ga;} });
-    return {name:m.name, teams:m.teams, tp, gf, ga, hasChamp: champ&&m.teams.indexOf(champ)>=0}; });
+  const rows=DATA.members.map(m=>{ let tp=0,gf=0,ga=0,w=0,d=0,l=0,pl=0; m.teams.forEach(t=>{ const x=ts[t]; if(x){tp+=x.tp;gf+=x.gf;ga+=x.ga;w+=x.w;d+=x.d;l+=x.l;pl+=x.p;} });
+    return {name:m.name, teams:m.teams, tp, gf, ga, w, d, l, pl, hasChamp: champ&&m.teams.indexOf(champ)>=0}; });
   const live=anyPlayed && drafted;
   let alloc={tp:rows.map(()=>0),gf:rows.map(()=>0),ga:rows.map(()=>0)};
   if(live){ alloc.tp=linearAlloc(rows,rows.map(r=>r.tp),false,30); alloc.gf=linearAlloc(rows,rows.map(r=>r.gf),false,15); alloc.ga=linearAlloc(rows,rows.map(r=>r.ga),true,15); }
@@ -435,7 +435,7 @@ function Leaderboard(){
       <div className="rounded-xl overflow-hidden" style={{border:"1px solid "+C.lineSoft}}>
         <div className="grid items-center px-4 py-2" style={{gridTemplateColumns:"28px 1fr 46px 46px 46px 46px 54px",
           background:C.panel,fontSize:11,color:C.dim,fontWeight:700,letterSpacing:.4}}>
-          <div>#</div><div>STABLE</div>
+          <div>#</div><div>STABLE <span style={{color:C.dim,fontWeight:400}}>· points of 100 →</span></div>
           <div style={{textAlign:"center"}}>🏆</div><div style={{textAlign:"center"}}>TP</div>
           <div style={{textAlign:"center"}}>GF</div><div style={{textAlign:"center"}}>GA</div>
           <div style={{textAlign:"right"}}>TOTAL</div>
@@ -450,6 +450,14 @@ function Leaderboard(){
               <div style={{textAlign:"center",fontSize:13,color:C.text}}>{live?r.pGf.toFixed(0):"—"}</div>
               <div style={{textAlign:"center",fontSize:13,color:C.text}}>{live?r.pGa.toFixed(0):"—"}</div>
               <div style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:i===0&&live?C.gold:C.text}}>{live?r.total.toFixed(0):"—"}</div>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2" style={{fontSize:11,color:C.sub}}>
+              <span>P <b style={{color:C.text}}>{r.pl}</b></span>
+              <span><b style={{color:C.green}}>{r.w}</b>W <b style={{color:C.sub}}>{r.d}</b>D <b style={{color:C.red}}>{r.l}</b>L</span>
+              <span>Pts <b style={{color:C.text}}>{r.tp}</b></span>
+              <span>GF <b style={{color:C.text}}>{r.gf}</b></span>
+              <span>GA <b style={{color:C.text}}>{r.ga}</b></span>
+              <span>GD <b style={{color:C.text}}>{(r.gf-r.ga>0?"+":"")+(r.gf-r.ga)}</b></span>
             </div>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {r.teams.length? r.teams.map(t=>(
