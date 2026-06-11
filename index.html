@@ -95,6 +95,39 @@ function standings(){
   return {rows, live, champ};
 }
 
+/* ---------- live scoring from API-Football results ---------- */
+function liveTeamStats(fixtures){
+  const s={};
+  const bump=(apiName,tp,gf,ga)=>{ const t=apiTeamName(apiName); if(!s[t]) s[t]={tp:0,gf:0,ga:0,p:0}; s[t].tp+=tp; s[t].gf+=gf; s[t].ga+=ga; s[t].p+=1; };
+  (fixtures||[]).forEach(f=>{
+    const st=f.fixture.status.short; if(["FT","AET","PEN"].indexOf(st)<0) return;
+    const h=f.goals.home, a=f.goals.away; if(h==null||a==null) return;
+    if(st==="PEN"){ bump(f.teams.home.name,1,h,a); bump(f.teams.away.name,1,a,h); }  // penalties count as a draw
+    else { bump(f.teams.home.name, h>a?3:(h===a?1:0), h, a); bump(f.teams.away.name, a>h?3:(a===h?1:0), a, h); }
+  });
+  return s;
+}
+function liveChampion(fixtures){
+  const fin=(fixtures||[]).find(f=>String(f.league.round||"").toLowerCase()==="final" && ["FT","AET","PEN"].indexOf(f.fixture.status.short)>=0);
+  if(!fin) return null;
+  if(fin.fixture.status.short==="PEN" && fin.score && fin.score.penalty && fin.score.penalty.home!=null)
+    return apiTeamName(fin.score.penalty.home>fin.score.penalty.away?fin.teams.home.name:fin.teams.away.name);
+  const h=fin.goals.home,a=fin.goals.away; if(h==null) return null;
+  return apiTeamName(h>=a?fin.teams.home.name:fin.teams.away.name);
+}
+function buildStandings(ts, champ){
+  const anyPlayed=Object.keys(ts).length>0;
+  const drafted=DATA.members.some(m=>m.teams.length>0);
+  const rows=DATA.members.map(m=>{ let tp=0,gf=0,ga=0; m.teams.forEach(t=>{ if(ts[t]){tp+=ts[t].tp;gf+=ts[t].gf;ga+=ts[t].ga;} });
+    return {name:m.name, teams:m.teams, tp, gf, ga, hasChamp: champ&&m.teams.indexOf(champ)>=0}; });
+  const live=anyPlayed && drafted;
+  let alloc={tp:rows.map(()=>0),gf:rows.map(()=>0),ga:rows.map(()=>0)};
+  if(live){ alloc.tp=linearAlloc(rows,rows.map(r=>r.tp),false,30); alloc.gf=linearAlloc(rows,rows.map(r=>r.gf),false,15); alloc.ga=linearAlloc(rows,rows.map(r=>r.ga),true,15); }
+  rows.forEach((r,i)=>{ r.pChamp=r.hasChamp?40:0; r.pTp=alloc.tp[i]; r.pGf=alloc.gf[i]; r.pGa=alloc.ga[i]; r.total=r.pChamp+r.pTp+r.pGf+r.pGa; });
+  rows.sort((a,b)=>b.total-a.total);
+  return {rows, live, champ};
+}
+
 /* ---------- owner lookup ---------- */
 const OWNER_MAP = {};
 (DATA.members||[]).forEach(m=>{ (m.teams||[]).forEach(t=>{ OWNER_MAP[t]=m.shortName; }); });
@@ -356,8 +389,15 @@ function OleParty({onClose}){
 
 /* ---------- Leaderboard ---------- */
 function Leaderboard(){
-  const {rows,live}=useMemo(()=>standings(),[]);
   const [party,setParty]=React.useState(false);
+  const [fx,setFx]=React.useState(null);
+  const [err,setErr]=React.useState(null);
+  const [loading,setLoading]=React.useState(true);
+  const load=React.useCallback(()=>{ setLoading(true); setErr(null);
+    fbFetch("/fixtures",{league:1,season:2026}).then(r=>{ setFx(r); setLoading(false); }).catch(e=>{ setErr(e); setLoading(false); }); },[]);
+  React.useEffect(()=>{ load(); },[load]);
+  const {rows,live}=React.useMemo(()=>buildStandings(liveTeamStats(fx||[]), liveChampion(fx||[])),[fx]);
+  const finished=(fx||[]).filter(f=>["FT","AET","PEN"].indexOf(f.fixture.status.short)>=0).length;
   return (
     <div className="flex flex-col gap-5">
       {party && <OleParty onClose={()=>setParty(false)}/>}
@@ -365,6 +405,10 @@ function Leaderboard(){
         style={{fontFamily:"'Press Start 2P',monospace",fontSize:13,color:C.ink,letterSpacing:1,
           background:"linear-gradient(90deg,#E8B23A,#F0A35A)",border:"0",borderRadius:12,
           padding:"14px",cursor:"pointer",boxShadow:"0 4px 0 #b97f12"}}>🎉 OLÉ OLÉ OLÉ 🎉</button>
+      <div className="flex items-center justify-between" style={{fontSize:11,color:C.dim}}>
+        <span>{err?"⚠ Couldn't load live results":(loading&&!fx)?"Loading live results…":live?(finished+" match"+(finished===1?"":"es")+" counted · live from results"):"Standings go live once matches kick off"}</span>
+        <button onClick={load} style={{fontSize:11,color:C.sub,background:C.card,border:"1px solid "+C.lineSoft,borderRadius:8,padding:"4px 10px",cursor:"pointer"}}>{loading?"…":"↻ refresh"}</button>
+      </div>
       {/* scoring system */}
       <div className="rounded-xl p-4" style={{background:C.card,border:"1px solid "+C.lineSoft}}>
         <div className="flex items-center gap-2 mb-3">
