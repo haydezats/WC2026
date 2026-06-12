@@ -11,7 +11,7 @@
     "start": "2026-06-11",
     "end": "2026-07-19",
     "displayTimezone": "AEST (Australia/Sydney, UTC+10)",
-    "lastUpdated": "2026-06-01",
+    "lastUpdated": "2026-06-12",
     "schemaVersion": 1,
     "tabs": [
       "schedule",
@@ -126,9 +126,9 @@
       "kickoffLocal": "2026-06-11T13:00:00-06:00",
       "kickoffAEST": "2026-06-12T05:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 2,
+        "awayGoals": 0
       }
     },
     {
@@ -140,9 +140,9 @@
       "kickoffLocal": "2026-06-11T20:00:00-06:00",
       "kickoffAEST": "2026-06-12T12:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 2,
+        "awayGoals": 1
       }
     },
     {
