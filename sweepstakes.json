@@ -1677,43 +1677,194 @@
       "id": "kidd",
       "name": "Adam Kidd",
       "shortName": "Kidd",
-      "teams": ["Portugal", "Netherlands", "Senegal", "Türkiye", "Iran", "Uzbekistan"]
+      "teams": [
+        "Portugal",
+        "Netherlands",
+        "Senegal",
+        "Türkiye",
+        "Iran",
+        "Uzbekistan"
+      ]
     },
     {
       "id": "ash",
       "name": "Ashley Mullahey",
       "shortName": "Ash",
-      "teams": ["England", "Mexico", "Canada", "Ivory Coast", "DR Congo", "Curaçao"]
+      "teams": [
+        "England",
+        "Mexico",
+        "Canada",
+        "Ivory Coast",
+        "DR Congo",
+        "Curaçao"
+      ]
     },
     {
       "id": "lapa",
       "name": "Chris Lapa",
       "shortName": "Lapa",
-      "teams": ["Argentina", "Japan", "Switzerland", "Australia", "Qatar", "New Zealand"]
+      "teams": [
+        "Argentina",
+        "Japan",
+        "Switzerland",
+        "Australia",
+        "Qatar",
+        "New Zealand"
+      ]
     },
     {
       "id": "damo",
       "name": "Damien Way",
       "shortName": "Damo",
-      "teams": ["Spain", "Colombia", "USA", "Egypt", "Panama", "South Africa"]
+      "teams": [
+        "Spain",
+        "Colombia",
+        "USA",
+        "Egypt",
+        "Panama",
+        "South Africa"
+      ]
     },
     {
       "id": "donda",
       "name": "Hayden Radic",
       "shortName": "Donda",
-      "teams": ["Germany", "Croatia", "South Korea", "Austria", "Scotland", "Tunisia"]
+      "teams": [
+        "Germany",
+        "Croatia",
+        "South Korea",
+        "Austria",
+        "Scotland",
+        "Tunisia"
+      ]
     },
     {
       "id": "chick",
       "name": "Josh Clarke",
       "shortName": "Chick",
-      "teams": ["France", "Norway", "Morocco", "Sweden", "Paraguay", "Jordan"]
+      "teams": [
+        "France",
+        "Norway",
+        "Morocco",
+        "Sweden",
+        "Paraguay",
+        "Jordan"
+      ]
     },
     {
       "id": "mash",
       "name": "Mash Raider",
       "shortName": "Mash",
-      "teams": ["Brazil", "Belgium", "Uruguay", "Ecuador", "Algeria", "Saudi Arabia"]
+      "teams": [
+        "Brazil",
+        "Belgium",
+        "Uruguay",
+        "Ecuador",
+        "Algeria",
+        "Saudi Arabia"
+      ]
     }
-  ]
+  ],
+  "cohorts": {
+    "default": "mates",
+    "defaultLabel": "The Mates",
+    "list": {
+      "crew": {
+        "label": "The Crew",
+        "members": [
+          {
+            "id": "c1",
+            "name": "Player One",
+            "shortName": "P1",
+            "teams": [
+              "Portugal",
+              "Netherlands",
+              "Senegal",
+              "Türkiye",
+              "Iran",
+              "Uzbekistan"
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "Player Two",
+            "shortName": "P2",
+            "teams": [
+              "England",
+              "Mexico",
+              "Canada",
+              "Ivory Coast",
+              "DR Congo",
+              "Curaçao"
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "Player Three",
+            "shortName": "P3",
+            "teams": [
+              "Argentina",
+              "Japan",
+              "Switzerland",
+              "Australia",
+              "Qatar",
+              "New Zealand"
+            ]
+          },
+          {
+            "id": "c4",
+            "name": "Player Four",
+            "shortName": "P4",
+            "teams": [
+              "Spain",
+              "Colombia",
+              "USA",
+              "Egypt",
+              "Panama",
+              "South Africa"
+            ]
+          },
+          {
+            "id": "c5",
+            "name": "Player Five",
+            "shortName": "P5",
+            "teams": [
+              "Germany",
+              "Croatia",
+              "South Korea",
+              "Austria",
+              "Scotland",
+              "Tunisia"
+            ]
+          },
+          {
+            "id": "c6",
+            "name": "Player Six",
+            "shortName": "P6",
+            "teams": [
+              "France",
+              "Norway",
+              "Morocco",
+              "Sweden",
+              "Paraguay",
+              "Jordan"
+            ]
+          },
+          {
+            "id": "c7",
+            "name": "Player Seven",
+            "shortName": "P7",
+            "teams": [
+              "Brazil",
+              "Belgium",
+              "Uruguay",
+              "Ecuador",
+              "Algeria",
+              "Saudi Arabia"
+            ]
+          }
+        ]
+      }
+    }
+  }
 }
