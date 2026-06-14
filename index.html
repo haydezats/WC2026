@@ -122,8 +122,12 @@ function liveChampion(fixtures){
 function buildStandings(ts){
   const anyPlayed=Object.keys(ts).length>0;
   const drafted=DATA.members.some(m=>m.teams.length>0);
-  const rows=DATA.members.map(m=>{ let tp=0,gf=0,ga=0,w=0,d=0,l=0,pl=0; m.teams.forEach(t=>{ const x=ts[t]; if(x){tp+=x.tp;gf+=x.gf;ga+=x.ga;w+=x.w;d+=x.d;l+=x.l;pl+=x.p;} });
-    return {name:m.name, teams:m.teams, tp, gf, ga, w, d, l, pl, total: tp+gf-ga}; }); // 3 win / 1 draw + GF - GA
+  const rows=DATA.members.map(m=>{ let tp=0,gf=0,ga=0,w=0,d=0,l=0,pl=0;
+    const teamsData=m.teams.map(t=>{ const x=ts[t]||{tp:0,gf:0,ga:0,w:0,d:0,l:0,p:0};
+      tp+=x.tp;gf+=x.gf;ga+=x.ga;w+=x.w;d+=x.d;l+=x.l;pl+=x.p;
+      return {name:t, p:x.p, w:x.w, d:x.d, l:x.l, gf:x.gf, ga:x.ga, contrib:x.tp+x.gf-x.ga}; });
+    teamsData.sort((a,b)=> b.contrib-a.contrib || b.p-a.p);
+    return {name:m.name, teams:m.teams, teamsData, tp, gf, ga, w, d, l, pl, total: tp+gf-ga}; }); // 3 win / 1 draw + GF - GA
   rows.sort((a,b)=> b.total-a.total || (b.gf-b.ga)-(a.gf-a.ga) || b.gf-a.gf || a.name.localeCompare(b.name));
   return {rows, live: anyPlayed && drafted};
 }
@@ -388,6 +392,62 @@ function OleParty({onClose}){
 }
 
 /* ---------- Leaderboard ---------- */
+function StatChip({label,value,color}){
+  return (
+    <div style={{flex:"1 1 92px",background:C.panel2,border:"1px solid "+C.lineSoft,borderRadius:8,padding:"7px 6px",textAlign:"center"}}>
+      <div style={{fontSize:8.5,color:C.dim,letterSpacing:.5,whiteSpace:"nowrap"}}>{label}</div>
+      <div style={{fontSize:18,fontWeight:800,color:color||C.text,lineHeight:1.1,marginTop:2}}>{value}</div>
+    </div>
+  );
+}
+function StableRow({r,i,live}){
+  const gd=r.gf-r.ga, top=i===0&&live;
+  return (
+    <div className="rounded-xl overflow-hidden" style={{border:"1px solid "+(top?C.gold+"66":C.lineSoft),background:C.card}}>
+      <div style={{padding:"12px 14px"}}>
+        <div className="flex items-center gap-3">
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:top?C.gold:C.sub,width:24,textAlign:"center",flex:"0 0 auto",lineHeight:1}}>{i+1}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:16,fontWeight:800,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.name}</div>
+            <div className="flex items-center flex-wrap gap-1" style={{marginTop:3}}>
+              {r.teams.map(t=>(
+                <span key={t} title={t} style={{fontSize:15,lineHeight:1}}>{flag(t)}</span>
+              ))}
+            </div>
+          </div>
+          <div style={{textAlign:"right",flex:"0 0 auto"}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:38,lineHeight:.85,color:top?C.gold:C.text}}>{r.total}</div>
+            <div style={{fontSize:9,color:C.dim,letterSpacing:1}}>TOTAL</div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-3">
+          <StatChip label="PLAYED" value={r.pl}/>
+          <StatChip label="W-D-L" value={r.w+"-"+r.d+"-"+r.l}/>
+          <StatChip label="PTS" value={r.tp}/>
+          <StatChip label="GOALS FOR" value={r.gf}/>
+          <StatChip label="GOALS AGN" value={r.ga}/>
+          <StatChip label="GOAL DIFF" value={(gd>0?"+":"")+gd} color={gd>0?C.green:(gd<0?C.red:null)}/>
+        </div>
+      </div>
+      <div style={{borderTop:"1px solid "+C.lineSoft,padding:"4px 14px 10px"}}>
+        <div className="grid" style={{gridTemplateColumns:"1fr 30px 52px 30px 30px 42px",fontSize:9,color:C.dim,padding:"6px 0 2px",letterSpacing:.4}}>
+          <div>TEAM CONTRIBUTIONS</div><div style={{textAlign:"center"}}>P</div><div style={{textAlign:"center"}}>W-D-L</div>
+          <div style={{textAlign:"center"}}>GF</div><div style={{textAlign:"center"}}>GA</div><div style={{textAlign:"right"}}>PTS</div>
+        </div>
+        {r.teamsData.map(t=>(
+          <div key={t.name} className="grid items-center" style={{gridTemplateColumns:"1fr 30px 52px 30px 30px 42px",fontSize:12,padding:"5px 0",borderTop:"1px solid "+C.lineSoft}}>
+            <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",color:t.p?C.text:C.dim}}>{flag(t.name)} {t.name}</div>
+            <div style={{textAlign:"center",color:C.sub}}>{t.p}</div>
+            <div style={{textAlign:"center",color:C.sub}}>{t.w}-{t.d}-{t.l}</div>
+            <div style={{textAlign:"center",color:C.sub}}>{t.gf}</div>
+            <div style={{textAlign:"center",color:C.sub}}>{t.ga}</div>
+            <div style={{textAlign:"right",fontWeight:800,color:t.contrib>0?C.green:(t.contrib<0?C.red:C.dim)}}>{(t.contrib>0?"+":"")+t.contrib}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 function Leaderboard(){
   const [party,setParty]=React.useState(false);
   const [fx,setFx]=React.useState(null);
@@ -412,36 +472,8 @@ function Leaderboard(){
       <div style={{fontSize:11,color:C.dim}}>Total = <b style={{color:C.sub}}>Pts</b> (3·win + 1·draw) + <b style={{color:C.sub}}>GF</b> − <b style={{color:C.sub}}>GA</b>, ranked by total.</div>
 
       {/* members */}
-      <div className="rounded-xl overflow-hidden" style={{border:"1px solid "+C.lineSoft}}>
-        <div className="grid items-center px-4 py-2" style={{gridTemplateColumns:"28px 1fr 64px",
-          background:C.panel,fontSize:11,color:C.dim,fontWeight:700,letterSpacing:.4}}>
-          <div>#</div><div>STABLE</div>
-          <div style={{textAlign:"right"}}>TOTAL</div>
-        </div>
-        {rows.map((r,i)=>(
-          <div key={r.name} className="px-4 py-3" style={{background:i%2?C.panel2:C.card,borderTop:"1px solid "+C.lineSoft}}>
-            <div className="grid items-center" style={{gridTemplateColumns:"28px 1fr 64px"}}>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:i===0&&live?C.gold:C.sub}}>{i+1}</div>
-              <div style={{fontSize:14,fontWeight:700,color:C.text}}>{r.name}</div>
-              <div style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:24,color:i===0&&live?C.gold:C.text}}>{r.total}</div>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2" style={{fontSize:11,color:C.sub}}>
-              <span>P <b style={{color:C.text}}>{r.pl}</b></span>
-              <span><b style={{color:C.green}}>{r.w}</b>W <b style={{color:C.sub}}>{r.d}</b>D <b style={{color:C.red}}>{r.l}</b>L</span>
-              <span>Pts <b style={{color:C.text}}>{r.tp}</b></span>
-              <span>GF <b style={{color:C.text}}>{r.gf}</b></span>
-              <span>GA <b style={{color:C.text}}>{r.ga}</b></span>
-              <span>GD <b style={{color:C.text}}>{(r.gf-r.ga>0?"+":"")+(r.gf-r.ga)}</b></span>
-            </div>
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {r.teams.length? r.teams.map(t=>(
-                <span key={t} className="rounded-md px-2 py-0.5" style={{background:C.ink,border:"1px solid "+C.lineSoft,fontSize:12,color:C.text}}>{flag(t)} {t}</span>
-              )) : Array.from({length:6}).map((_,k)=>(
-                <span key={k} className="rounded-md px-2 py-0.5" style={{background:C.ink,border:"1px dashed "+C.line,fontSize:12,color:C.dim}}>slot {k+1}</span>
-              ))}
-            </div>
-          </div>
-        ))}
+      <div className="flex flex-col gap-2.5">
+        {rows.map((r,i)=> <StableRow key={r.name} r={r} i={i} live={live}/>)}
       </div>
       <div style={{fontSize:11,color:C.dim,lineHeight:1.5}}>
         Each stable's score aggregates its 6 teams across the whole tournament: <b style={{color:C.sub}}>3</b> per win,
