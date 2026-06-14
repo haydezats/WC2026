@@ -406,14 +406,20 @@ function StableRow({r,i,live}){
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:top?C.gold:C.sub,width:24,textAlign:"center",flex:"0 0 auto",lineHeight:1}}>{i+1}</div>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:16,fontWeight:800,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.name}</div>
-            <div style={{fontSize:10,color:C.dim,marginTop:1}}>{r.pl} played · {open?"hide teams ▲":"team breakdown ▾"}</div>
+            <div className="flex items-center flex-wrap gap-1" style={{marginTop:3}}>
+              {r.teams.map(t=>(
+                <span key={t} title={t} style={{fontSize:15,lineHeight:1}}>{flag(t)}</span>
+              ))}
+            </div>
           </div>
           <div style={{textAlign:"right",flex:"0 0 auto"}}>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:38,lineHeight:.85,color:top?C.gold:C.text}}>{r.total}</div>
             <div style={{fontSize:9,color:C.dim,letterSpacing:1}}>TOTAL</div>
           </div>
+          <div style={{flex:"0 0 auto",width:26,height:26,borderRadius:7,background:C.panel2,border:"1px solid "+C.lineSoft,display:"flex",alignItems:"center",justifyContent:"center",color:top?C.gold:C.sub,fontSize:11,transform:open?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</div>
         </div>
-        <div className="flex flex-wrap gap-2 mt-3">
+        <div style={{fontSize:10,color:C.dim,marginTop:6}}>{open?"▴ tap to collapse":"▾ tap to expand team-by-team points"}</div>
+        <div className="flex flex-wrap gap-2 mt-2">
           <StatChip label="PLAYED" value={r.pl}/>
           <StatChip label="W-D-L" value={r.w+"-"+r.d+"-"+r.l}/>
           <StatChip label="PTS" value={r.tp}/>
