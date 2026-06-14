@@ -138,6 +138,15 @@ const ownerOf = t => OWNER_MAP[t] || null;
 const API_ALIAS = { "Czech Republic":"Czechia", "Congo DR":"DR Congo", "Cape Verde Islands":"Cape Verde" };
 const apiTeamName = n => API_ALIAS[n] || n;
 const ownerOfApi = n => ownerOf(apiTeamName(n));
+// Static FIFA world-ranking snapshot (≈ June 2026). API-Football has no rankings endpoint — edit as needed.
+const FIFA_RANK = {
+  "Argentina":1,"Spain":2,"France":3,"England":4,"Portugal":5,"Brazil":6,"Netherlands":7,"Belgium":8,"Germany":9,"Croatia":10,
+  "Morocco":12,"Colombia":13,"Uruguay":14,"Japan":15,"USA":16,"Mexico":17,"Switzerland":18,"Senegal":19,"Iran":20,"Austria":22,
+  "Ecuador":23,"South Korea":24,"Türkiye":26,"Australia":27,"Sweden":28,"Canada":30,"Norway":32,"Panama":33,"Egypt":34,"Qatar":36,
+  "Czechia":38,"Scotland":39,"Paraguay":41,"Ivory Coast":42,"Tunisia":43,"Algeria":44,"Uzbekistan":53,"DR Congo":56,"Iraq":58,
+  "Saudi Arabia":59,"South Africa":61,"Jordan":64,"Cape Verde":70,"Ghana":73,"Bosnia & Herzegovina":74,"Curaçao":82,"Haiti":83,"New Zealand":89
+};
+const fifaRank = n => FIFA_RANK[apiTeamName(n)] || null;
 async function fbFetch(path, params){
   const qs = new URLSearchParams(Object.assign({path:path}, params||{})).toString();
   const r = await fetch("/api/football?"+qs, {cache:"no-store"});
@@ -1145,6 +1154,16 @@ const pctNum = s => s ? (parseFloat(s)||0) : 0;
 const FORM_CACHE={}, SQUAD_CACHE={}, ODDS_CACHE={};
 async function getForm(teamId){ if(FORM_CACHE[teamId]) return FORM_CACHE[teamId]; const d=await fbFetch("/fixtures",{team:teamId,last:6}).catch(()=>[]); FORM_CACHE[teamId]=d; return d; }
 async function getSquad(teamId){ if(SQUAD_CACHE[teamId]) return SQUAD_CACHE[teamId]; const d=await fbFetch("/players/squads",{team:teamId}).catch(()=>[]); SQUAD_CACHE[teamId]=d; return d; }
+const CLUB_CACHE={};
+async function getPlayerClub(id){
+  if(CLUB_CACHE[id]!==undefined) return CLUB_CACHE[id];
+  const arr=await fbFetch("/players",{id:id,season:2025}).catch(()=>[]);
+  const stats=(arr[0]&&arr[0].statistics)||[];
+  let best=null;
+  stats.forEach(s=>{ if(s.league && s.league.country && s.league.country!=="World" && s.team){ const ap=(s.games&&s.games.appearences)||0; if(!best||ap>best.ap) best={ap:ap,team:s.team}; } });
+  const club=best?{name:best.team.name,logo:best.team.logo}:null;
+  CLUB_CACHE[id]=club; return club;
+}
 async function getOdds(fixtureId){ if(ODDS_CACHE[fixtureId]) return ODDS_CACHE[fixtureId]; const d=await fbFetch("/odds",{fixture:fixtureId}).catch(()=>[]); ODDS_CACHE[fixtureId]=d; return d; }
 function resultOf(f, teamId){
   const st=f.fixture.status.short; if(["FT","AET","PEN"].indexOf(st)<0) return null;
@@ -1162,6 +1181,7 @@ function ApiTeam({team}){
         : <span style={{flex:"0 0 auto"}}>{flag(apiTeamName(team?team.name:""))}</span>}
       <span style={{color:win?C.gold:C.text,fontWeight:win?800:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{team?team.name:"—"}</span>
       {o && <span style={{fontSize:10,fontWeight:700,color:C.gold,background:C.gold+"18",border:"1px solid "+C.gold+"44",borderRadius:4,padding:"0 4px",letterSpacing:.3,flex:"0 0 auto"}}>{o}</span>}
+      {team && fifaRank(team.name) && <span title="FIFA ranking" style={{fontSize:9,fontWeight:700,color:C.blue,background:C.blue+"18",border:"1px solid "+C.blue+"44",borderRadius:4,padding:"0 3px",flex:"0 0 auto"}}>#{fifaRank(team.name)}</span>}
     </span>
   );
 }
@@ -1430,6 +1450,22 @@ function FormPills({teamId,teamName}){
     </div>
   );
 }
+function PlayerRow({p}){
+  const [club,setClub]=React.useState(undefined);
+  React.useEffect(()=>{ let on=true; getPlayerClub(p.id).then(c=>{ if(on) setClub(c); }); return ()=>{on=false;}; },[p.id]);
+  return (
+    <div className="flex items-center gap-2" style={{fontSize:11,padding:"2px 0"}}>
+      <span style={{width:18,textAlign:"center",color:C.gold,fontWeight:700,flex:"0 0 auto"}}>{p.number||"–"}</span>
+      <span style={{color:C.text,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</span>
+      {club ? (
+        <span className="inline-flex items-center gap-1" style={{flex:"0 0 auto",color:C.sub,maxWidth:130}} title={club.name}>
+          {club.logo&&<img src={club.logo} width="13" height="13" alt="" style={{objectFit:"contain",flex:"0 0 auto"}}/>}
+          <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{club.name}</span>
+        </span>
+      ) : club===undefined ? <span style={{flex:"0 0 auto",color:C.dim,fontSize:9}}>…</span> : null}
+    </div>
+  );
+}
 function SquadList({teamId,teamName,logo}){
   const [d,setD]=React.useState(undefined);
   React.useEffect(()=>{ let on=true; getSquad(teamId).then(r=>{ if(on) setD(r); }); return ()=>{on=false;}; },[teamId]);
@@ -1437,14 +1473,14 @@ function SquadList({teamId,teamName,logo}){
   const order=["Goalkeeper","Defender","Midfielder","Attacker"];
   return (
     <div>
-      <div className="flex items-center gap-2" style={{marginBottom:6}}>{logo&&<img src={logo} width="16" height="16" alt="" style={{objectFit:"contain"}}/>}<b style={{fontSize:12,color:C.text}}>{teamName}</b></div>
+      <div className="flex items-center gap-2" style={{marginBottom:6}}>{logo&&<img src={logo} width="16" height="16" alt="" style={{objectFit:"contain"}}/>}<b style={{fontSize:12,color:C.text}}>{teamName}</b><span style={{fontSize:9,color:C.dim,marginLeft:"auto"}}>player · club</span></div>
       {d===undefined ? <div style={{fontSize:11,color:C.dim}}>…</div>
         : players.length===0 ? <div style={{fontSize:11,color:C.dim}}>Squad not published yet.</div>
         : order.map(pos=>{ const ps=players.filter(p=>p.position===pos); if(!ps.length) return null;
             return (
-              <div key={pos} style={{marginBottom:6}}>
-                <div style={{fontSize:9,color:C.dim,marginBottom:2}}>{pos.toUpperCase()}</div>
-                <div className="flex flex-wrap" style={{gap:"2px 12px"}}>{ps.map(p=><span key={p.id} style={{fontSize:11,color:C.sub}}><b style={{color:C.text}}>{p.number||"–"}</b> {p.name}</span>)}</div>
+              <div key={pos} style={{marginBottom:8}}>
+                <div style={{fontSize:9,color:C.dim,marginBottom:2,letterSpacing:.4}}>{pos.toUpperCase()}</div>
+                <div className="flex flex-col">{ps.map(p=><PlayerRow key={p.id} p={p}/>)}</div>
               </div>
             );
           })}
