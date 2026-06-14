@@ -1766,11 +1766,11 @@
     }
   ],
   "cohorts": {
-    "default": "mates",
-    "defaultLabel": "The Mates",
+    "default": "noitalys",
+    "defaultLabel": "No-italys",
     "list": {
-      "crew": {
-        "label": "The Crew",
+      "agc": {
+        "label": "AGC",
         "members": [
           {
             "id": "c1",
