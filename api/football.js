@@ -26,6 +26,7 @@ function ttlFor(path, hasData) {
   if (path === "/predictions") return 3600; // updated hourly upstream
   if (path === "/odds") return 1800;
   if (path === "/venues") return 86400;
+  if (path === "/players") return 86400; // per-player club lookup is static for a finished season
   if (path.indexOf("events") >= 0 || path.indexOf("players") >= 0) return hasData ? 600 : 30;
   if (path === "/standings" || path === "/fixtures" || path === "/fixtures/statistics") return 30;
   if (path === "/teams" || path === "/leagues" || path === "/players/squads") return 3600;
