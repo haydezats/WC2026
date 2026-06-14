@@ -397,11 +397,10 @@ function StatChip({label,value,color}){
   );
 }
 function StableRow({r,i,live}){
-  const [open,setOpen]=React.useState(false);
   const gd=r.gf-r.ga, top=i===0&&live;
   return (
     <div className="rounded-xl overflow-hidden" style={{border:"1px solid "+(top?C.gold+"66":C.lineSoft),background:C.card}}>
-      <button onClick={()=>setOpen(o=>!o)} className="w-full text-left" style={{background:"transparent",border:0,cursor:"pointer",padding:"12px 14px",display:"block"}}>
+      <div style={{padding:"12px 14px"}}>
         <div className="flex items-center gap-3">
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:top?C.gold:C.sub,width:24,textAlign:"center",flex:"0 0 auto",lineHeight:1}}>{i+1}</div>
           <div style={{flex:1,minWidth:0}}>
@@ -416,10 +415,8 @@ function StableRow({r,i,live}){
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:38,lineHeight:.85,color:top?C.gold:C.text}}>{r.total}</div>
             <div style={{fontSize:9,color:C.dim,letterSpacing:1}}>TOTAL</div>
           </div>
-          <div style={{flex:"0 0 auto",width:26,height:26,borderRadius:7,background:C.panel2,border:"1px solid "+C.lineSoft,display:"flex",alignItems:"center",justifyContent:"center",color:top?C.gold:C.sub,fontSize:11,transform:open?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</div>
         </div>
-        <div style={{fontSize:10,color:C.dim,marginTop:6}}>{open?"▴ tap to collapse":"▾ tap to expand team-by-team points"}</div>
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="flex flex-wrap gap-2 mt-3">
           <StatChip label="PLAYED" value={r.pl}/>
           <StatChip label="W-D-L" value={r.w+"-"+r.d+"-"+r.l}/>
           <StatChip label="PTS" value={r.tp}/>
@@ -427,25 +424,23 @@ function StableRow({r,i,live}){
           <StatChip label="GOALS AGN" value={r.ga}/>
           <StatChip label="GOAL DIFF" value={(gd>0?"+":"")+gd} color={gd>0?C.green:(gd<0?C.red:null)}/>
         </div>
-      </button>
-      {open && (
-        <div style={{borderTop:"1px solid "+C.lineSoft,padding:"4px 14px 10px"}}>
-          <div className="grid" style={{gridTemplateColumns:"1fr 30px 52px 30px 30px 42px",fontSize:9,color:C.dim,padding:"6px 0 2px"}}>
-            <div>TEAM</div><div style={{textAlign:"center"}}>P</div><div style={{textAlign:"center"}}>W-D-L</div>
-            <div style={{textAlign:"center"}}>GF</div><div style={{textAlign:"center"}}>GA</div><div style={{textAlign:"right"}}>PTS</div>
-          </div>
-          {r.teamsData.map(t=>(
-            <div key={t.name} className="grid items-center" style={{gridTemplateColumns:"1fr 30px 52px 30px 30px 42px",fontSize:12,padding:"5px 0",borderTop:"1px solid "+C.lineSoft}}>
-              <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",color:t.p?C.text:C.dim}}>{flag(t.name)} {t.name}</div>
-              <div style={{textAlign:"center",color:C.sub}}>{t.p}</div>
-              <div style={{textAlign:"center",color:C.sub}}>{t.w}-{t.d}-{t.l}</div>
-              <div style={{textAlign:"center",color:C.sub}}>{t.gf}</div>
-              <div style={{textAlign:"center",color:C.sub}}>{t.ga}</div>
-              <div style={{textAlign:"right",fontWeight:800,color:t.contrib>0?C.green:(t.contrib<0?C.red:C.dim)}}>{(t.contrib>0?"+":"")+t.contrib}</div>
-            </div>
-          ))}
+      </div>
+      <div style={{borderTop:"1px solid "+C.lineSoft,padding:"4px 14px 10px"}}>
+        <div className="grid" style={{gridTemplateColumns:"1fr 30px 52px 30px 30px 42px",fontSize:9,color:C.dim,padding:"6px 0 2px",letterSpacing:.4}}>
+          <div>TEAM CONTRIBUTIONS</div><div style={{textAlign:"center"}}>P</div><div style={{textAlign:"center"}}>W-D-L</div>
+          <div style={{textAlign:"center"}}>GF</div><div style={{textAlign:"center"}}>GA</div><div style={{textAlign:"right"}}>PTS</div>
         </div>
-      )}
+        {r.teamsData.map(t=>(
+          <div key={t.name} className="grid items-center" style={{gridTemplateColumns:"1fr 30px 52px 30px 30px 42px",fontSize:12,padding:"5px 0",borderTop:"1px solid "+C.lineSoft}}>
+            <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",color:t.p?C.text:C.dim}}>{flag(t.name)} {t.name}</div>
+            <div style={{textAlign:"center",color:C.sub}}>{t.p}</div>
+            <div style={{textAlign:"center",color:C.sub}}>{t.w}-{t.d}-{t.l}</div>
+            <div style={{textAlign:"center",color:C.sub}}>{t.gf}</div>
+            <div style={{textAlign:"center",color:C.sub}}>{t.ga}</div>
+            <div style={{textAlign:"right",fontWeight:800,color:t.contrib>0?C.green:(t.contrib<0?C.red:C.dim)}}>{(t.contrib>0?"+":"")+t.contrib}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
