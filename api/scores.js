@@ -7,7 +7,15 @@
 const { createClient } = require("redis");
 
 const KEYS = { penalty: "pen:scores", divers: "divers:scores" };
-const keyFor = (g) => KEYS[g] || KEYS.penalty; // default keeps the original penalty board
+// Per-group namespacing: the default group (no group param) keeps the original
+// "pen:scores"/"divers:scores" boards; named groups get a sanitized suffix so each
+// cohort has its own leaderboard on the same Redis store.
+const sanitizeGroup = (g) => String(g == null ? "" : g).toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 24);
+const keyFor = (game, group) => {
+  const base = KEYS[game] || KEYS.penalty; // default keeps the original penalty board
+  const grp = sanitizeGroup(group);
+  return grp ? base + ":" + grp : base;
+};
 const SEP = ""; // delimiter between display name and uniqueness suffix in a member
 
 let client; // reused across warm invocations
@@ -36,7 +44,7 @@ module.exports = async (req, res) => {
     const c = await getClient();
 
     if (req.method === "GET") {
-      const key = keyFor(req.query && req.query.game);
+      const key = keyFor(req.query && req.query.game, req.query && req.query.group);
       res.setHeader("Cache-Control", "no-store");
       res.status(200).json({ scores: await topFive(c, key) });
       return;
@@ -47,7 +55,7 @@ module.exports = async (req, res) => {
       if (typeof body === "string") { try { body = JSON.parse(body || "{}"); } catch (e) { body = {}; } }
       if (!body || typeof body !== "object") body = {};
 
-      const key = keyFor(body.game);
+      const key = keyFor(body.game, body.group);
       const name = String(body.name == null ? "" : body.name)
         .replace(/[^\x20-\x7E]/g, "").trim().slice(0, 10).toUpperCase() || "YOU";
       let score = Math.floor(Number(body.score));
