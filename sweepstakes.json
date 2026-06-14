@@ -1773,94 +1773,93 @@
         "label": "AGC",
         "members": [
           {
-            "id": "c1",
-            "name": "Player One",
-            "shortName": "P1",
+            "id": "brad",
+            "name": "Brad",
+            "shortName": "Brad",
             "teams": [
-              "Portugal",
-              "Netherlands",
-              "Senegal",
-              "Türkiye",
-              "Iran",
-              "Uzbekistan"
-            ]
-          },
-          {
-            "id": "c2",
-            "name": "Player Two",
-            "shortName": "P2",
-            "teams": [
-              "England",
-              "Mexico",
-              "Canada",
-              "Ivory Coast",
-              "DR Congo",
-              "Curaçao"
-            ]
-          },
-          {
-            "id": "c3",
-            "name": "Player Three",
-            "shortName": "P3",
-            "teams": [
-              "Argentina",
-              "Japan",
-              "Switzerland",
-              "Australia",
-              "Qatar",
-              "New Zealand"
-            ]
-          },
-          {
-            "id": "c4",
-            "name": "Player Four",
-            "shortName": "P4",
-            "teams": [
-              "Spain",
+              "Brazil",
               "Colombia",
-              "USA",
-              "Egypt",
-              "Panama",
-              "South Africa"
+              "Mexico",
+              "Paraguay",
+              "Sweden",
+              "Bosnia & Herzegovina",
+              "South Africa",
+              "Haiti"
             ]
           },
           {
-            "id": "c5",
-            "name": "Player Five",
-            "shortName": "P5",
-            "teams": [
-              "Germany",
-              "Croatia",
-              "South Korea",
-              "Austria",
-              "Scotland",
-              "Tunisia"
-            ]
-          },
-          {
-            "id": "c6",
-            "name": "Player Six",
-            "shortName": "P6",
+            "id": "luke",
+            "name": "Luke",
+            "shortName": "Luke",
             "teams": [
               "France",
-              "Norway",
               "Morocco",
-              "Sweden",
-              "Paraguay",
+              "Japan",
+              "Austria",
+              "Türkiye",
+              "Curaçao",
+              "Qatar",
               "Jordan"
             ]
           },
           {
-            "id": "c7",
-            "name": "Player Seven",
-            "shortName": "P7",
+            "id": "hayden",
+            "name": "Hayden",
+            "shortName": "Hayden",
             "teams": [
-              "Brazil",
+              "Spain",
+              "Croatia",
+              "South Korea",
+              "Canada",
+              "Australia",
+              "Scotland",
+              "DR Congo",
+              "New Zealand"
+            ]
+          },
+          {
+            "id": "elliot",
+            "name": "Elliot",
+            "shortName": "Elliot",
+            "teams": [
+              "Argentina",
               "Belgium",
+              "Norway",
               "Uruguay",
+              "USA",
+              "Iran",
+              "Uzbekistan",
+              "Cape Verde"
+            ]
+          },
+          {
+            "id": "paul",
+            "name": "Paul",
+            "shortName": "Paul",
+            "teams": [
+              "Portugal",
+              "Netherlands",
               "Ecuador",
+              "Ivory Coast",
+              "Egypt",
+              "Tunisia",
+              "Saudi Arabia",
+              "Iraq"
+            ]
+          },
+          {
+            "id": "biraj",
+            "name": "Biraj",
+            "shortName": "Biraj",
+            "teams": [
+              "Germany",
+              "England",
+              "Senegal",
+              "Switzerland",
               "Algeria",
-              "Saudi Arabia"
+              "Ghana",
+              "Czechia",
+              "Panama"
             ]
           }
         ]
