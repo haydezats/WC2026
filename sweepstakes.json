@@ -11,7 +11,7 @@
     "start": "2026-06-11",
     "end": "2026-07-19",
     "displayTimezone": "AEST (Australia/Sydney, UTC+10)",
-    "lastUpdated": "2026-06-01",
+    "lastUpdated": "2026-06-17",
     "schemaVersion": 1,
     "tabs": [
       "schedule",
@@ -126,9 +126,9 @@
       "kickoffLocal": "2026-06-11T13:00:00-06:00",
       "kickoffAEST": "2026-06-12T05:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 2,
+        "awayGoals": 0
       }
     },
     {
@@ -140,9 +140,9 @@
       "kickoffLocal": "2026-06-11T20:00:00-06:00",
       "kickoffAEST": "2026-06-12T12:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 2,
+        "awayGoals": 1
       }
     },
     {
@@ -154,9 +154,9 @@
       "kickoffLocal": "2026-06-12T15:00:00-04:00",
       "kickoffAEST": "2026-06-13T05:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 1,
+        "awayGoals": 1
       }
     },
     {
@@ -168,9 +168,9 @@
       "kickoffLocal": "2026-06-12T18:00:00-07:00",
       "kickoffAEST": "2026-06-13T11:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 4,
+        "awayGoals": 1
       }
     },
     {
@@ -182,9 +182,9 @@
       "kickoffLocal": "2026-06-13T12:00:00-07:00",
       "kickoffAEST": "2026-06-14T05:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 1,
+        "awayGoals": 1
       }
     },
     {
@@ -196,9 +196,9 @@
       "kickoffLocal": "2026-06-13T18:00:00-04:00",
       "kickoffAEST": "2026-06-14T08:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 1,
+        "awayGoals": 1
       }
     },
     {
@@ -210,9 +210,9 @@
       "kickoffLocal": "2026-06-13T21:00:00-04:00",
       "kickoffAEST": "2026-06-14T11:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 0,
+        "awayGoals": 1
       }
     },
     {
@@ -224,9 +224,9 @@
       "kickoffLocal": "2026-06-13T18:00:00-07:00",
       "kickoffAEST": "2026-06-14T11:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 2,
+        "awayGoals": 0
       }
     },
     {
@@ -238,9 +238,9 @@
       "kickoffLocal": "2026-06-14T12:00:00-05:00",
       "kickoffAEST": "2026-06-15T03:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 7,
+        "awayGoals": 1
       }
     },
     {
@@ -252,9 +252,9 @@
       "kickoffLocal": "2026-06-14T15:00:00-05:00",
       "kickoffAEST": "2026-06-15T06:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 2,
+        "awayGoals": 2
       }
     },
     {
@@ -266,9 +266,9 @@
       "kickoffLocal": "2026-06-14T19:00:00-04:00",
       "kickoffAEST": "2026-06-15T09:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 1,
+        "awayGoals": 0
       }
     },
     {
@@ -280,9 +280,9 @@
       "kickoffLocal": "2026-06-14T20:00:00-06:00",
       "kickoffAEST": "2026-06-15T12:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 5,
+        "awayGoals": 1
       }
     },
     {
@@ -294,9 +294,9 @@
       "kickoffLocal": "2026-06-15T12:00:00-04:00",
       "kickoffAEST": "2026-06-16T02:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 0,
+        "awayGoals": 0
       }
     },
     {
@@ -308,9 +308,9 @@
       "kickoffLocal": "2026-06-15T12:00:00-07:00",
       "kickoffAEST": "2026-06-16T05:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 1,
+        "awayGoals": 1
       }
     },
     {
@@ -322,9 +322,9 @@
       "kickoffLocal": "2026-06-15T18:00:00-04:00",
       "kickoffAEST": "2026-06-16T08:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 1,
+        "awayGoals": 1
       }
     },
     {
@@ -336,9 +336,9 @@
       "kickoffLocal": "2026-06-15T18:00:00-07:00",
       "kickoffAEST": "2026-06-16T11:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 2,
+        "awayGoals": 2
       }
     },
     {
@@ -350,9 +350,9 @@
       "kickoffLocal": "2026-06-16T15:00:00-04:00",
       "kickoffAEST": "2026-06-17T05:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 3,
+        "awayGoals": 1
       }
     },
     {
@@ -364,9 +364,9 @@
       "kickoffLocal": "2026-06-16T18:00:00-04:00",
       "kickoffAEST": "2026-06-17T08:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 1,
+        "awayGoals": 4
       }
     },
     {
@@ -378,9 +378,9 @@
       "kickoffLocal": "2026-06-16T20:00:00-05:00",
       "kickoffAEST": "2026-06-17T11:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 3,
+        "awayGoals": 0
       }
     },
     {
@@ -392,9 +392,9 @@
       "kickoffLocal": "2026-06-16T21:00:00-07:00",
       "kickoffAEST": "2026-06-17T14:00:00+10:00",
       "result": {
-        "played": false,
-        "homeGoals": null,
-        "awayGoals": null
+        "played": true,
+        "homeGoals": 3,
+        "awayGoals": 1
       }
     },
     {
