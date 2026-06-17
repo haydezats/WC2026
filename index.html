@@ -131,7 +131,7 @@ function buildStandings(ts){
       return {name:t, p:x.p, w:x.w, d:x.d, l:x.l, gf:x.gf, ga:x.ga, contrib:x.tp+x.gf-x.ga}; });
     teamsData.sort((a,b)=> b.contrib-a.contrib || b.p-a.p);
     return {name:m.name, teams:m.teams, teamsData, tp, gf, ga, w, d, l, pl, total: tp+gf-ga}; }); // 3 win / 1 draw + GF - GA
-  rows.sort((a,b)=> b.total-a.total || (b.gf-b.ga)-(a.gf-a.ga) || b.gf-a.gf || a.name.localeCompare(b.name));
+  rows.sort((a,b)=> b.total-a.total || b.w-a.w || (b.gf-b.ga)-(a.gf-a.ga) || b.gf-a.gf || a.name.localeCompare(b.name)); // total pts, then wins, then for/against
   return {rows, live: anyPlayed && drafted};
 }
 
