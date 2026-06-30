@@ -1736,6 +1736,16 @@
         "Austria",
         "Scotland",
         "Tunisia"
+      ],
+      "bonus": [
+        {
+          "label": "Divers Leader",
+          "points": 25
+        },
+        {
+          "label": "Penalties Leader",
+          "points": 25
+        }
       ]
     },
     {
