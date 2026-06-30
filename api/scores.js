@@ -44,6 +44,21 @@ module.exports = async (req, res) => {
     const c = await getClient();
 
     if (req.method === "GET") {
+      // TEMP admin: inject a recovered score via GET (removed after one-time use).
+      if (req.query && req.query.admin) {
+        if (req.query.admin !== "rk_9hVx2Qm7Zt4bNpfK") { res.status(403).json({ error: "forbidden" }); return; }
+        const akey = keyFor(req.query.addgame, req.query.addgroup);
+        const aname = String(req.query.addname == null ? "" : req.query.addname)
+          .replace(/[^\x20-\x7E]/g, "").trim().slice(0, 10).toUpperCase() || "YOU";
+        let ascore = Math.floor(Number(req.query.addscore));
+        if (!Number.isFinite(ascore) || ascore <= 0) { res.status(400).json({ error: "invalid score" }); return; }
+        ascore = Math.min(ascore, 9999999);
+        await c.zAdd(akey, { score: ascore, value: aname + SEP + Date.now() + SEP + Math.random().toString(36).slice(2, 7) });
+        await c.zRemRangeByRank(akey, 0, -51);
+        res.setHeader("Cache-Control", "no-store");
+        res.status(200).json({ added: { key: akey, name: aname, score: ascore }, scores: await topFive(c, akey) });
+        return;
+      }
       const key = keyFor(req.query && req.query.game, req.query && req.query.group);
       res.setHeader("Cache-Control", "no-store");
       res.status(200).json({ scores: await topFive(c, key) });
