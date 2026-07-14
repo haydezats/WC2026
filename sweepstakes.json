@@ -1797,6 +1797,12 @@
               "Bosnia & Herzegovina",
               "South Africa",
               "Haiti"
+            ],
+            "bonus": [
+              {
+                "label": "Divers Leader",
+                "points": 25
+              }
             ]
           },
           {
@@ -1827,6 +1833,12 @@
               "Scotland",
               "DR Congo",
               "New Zealand"
+            ],
+            "bonus": [
+              {
+                "label": "Penalties Leader",
+                "points": 25
+              }
             ]
           },
           {
