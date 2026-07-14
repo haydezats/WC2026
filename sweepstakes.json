@@ -1697,6 +1697,12 @@
         "Ivory Coast",
         "DR Congo",
         "Curaçao"
+      ],
+      "bonus": [
+        {
+          "label": "Divers Leader",
+          "points": 25
+        }
       ]
     },
     {
@@ -1738,10 +1744,6 @@
         "Tunisia"
       ],
       "bonus": [
-        {
-          "label": "Divers Leader",
-          "points": 25
-        },
         {
           "label": "Penalties Leader",
           "points": 25
