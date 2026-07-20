@@ -1838,6 +1838,10 @@
               {
                 "label": "Penalties Leader",
                 "points": 25
+              },
+              {
+                "label": "Spain Bonus",
+                "points": 20
               }
             ]
           },
